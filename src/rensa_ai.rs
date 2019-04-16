@@ -69,15 +69,17 @@ impl<'a> RensaAi<'a> {
 
         self.cur_turn = self.read1();
         // eprintln!("start read {}", self.cur_turn);
-        let rest_time_in_milli = self.read1::<u32>();
+        let _rest_time_in_milli = self.read1::<u32>();
         self.player.obstacle = self.read1();
         self.player.skill_guage = self.read1();
+        let _player_score = self.read1::<u32>();
         self.player.board = self.read_board();
         self.read1::<String>();
 
-        let rest_time_in_milli = self.read1::<u32>();
+        let _rest_time_in_milli = self.read1::<u32>();
         self.enemy.obstacle = self.read1();
         self.enemy.skill_guage = self.read1();
+        let _enemy_score = self.read1::<u32>();
         self.enemy.board = self.read_board();
         self.read1::<String>();
     }

@@ -61,8 +61,8 @@ impl RensaPlan {
     pub fn calc_rensa_plan(&mut self, cur_turn: usize, player: &player::Player) {
         let mut next = Vec::new();
         let mut cur = vec![BeamState::new(player.clone(), 0, Vec::new())];
-        let fire_turn = 18;
-        let beam_width = 100 * 3 * 3;
+        let fire_turn = 11;
+        let beam_width = 100 * 3 * 3 * 3;
         let actions = action::Action::all_actions();
         // let allow_dead_line = Self::is_dangerous(&player.board);
 
