@@ -7,38 +7,59 @@ use std::collections::HashSet;
 use super::action;
 use super::score_calculator;
 
-use super::consts::{W,H,VANISH};
+use super::consts::{W,H,VANISH,OBSTACLE};
 
 #[derive(Clone)]
 pub struct Board {
     column: [u64; W],
+    dead: bool,
 }
 
-// fn rotate(pattern: &[[u8; 2]; 2], rot: usize) -> [[u8; 2]; 2] {
-//     let mut rot = rot;
-//     let mut pattern = pattern.clone();
-//     while rot > 0 {
-//         pattern = [[pattern[1][0], pattern[0][0]],
-//                     [pattern[1][1], pattern[0][1]]];
-//         rot -= 1;
-//     }
-//     pattern
-// }
+fn rotate(pattern: &[[u8; 2]; 2], rot: usize) -> [[u8; 2]; 2] {
+    let mut rot = rot;
+    let mut pattern = pattern.clone();
+    while rot > 0 {
+        pattern = [[pattern[1][0], pattern[0][0]],
+                    [pattern[1][1], pattern[0][1]]];
+        rot -= 1;
+    }
+    pattern
+}
 
 impl Board {
     pub fn new() -> Self {
         Self {
             column: [0; W],
+            dead: false,
         }
     }
 
     pub fn from_board(board: [u8; (W * H) as usize]) -> Self {
-        unimplemented!()
+        let mut b = Board::new();
+        for y in 0..H {
+            for x in 0..W {
+                b.column[x] |= (board[(H-1-y)*W+x] as u64) << (4 * y);
+            }
+        }
+        // eprintln!("{:?}", b);
+        b
     }
 
-    fn top_empty_pos(&self, x: usize) -> usize {
-        // self.height[x] as usize * W as usize + x
-        unimplemented!()
+    fn height(&self, x: usize) -> usize {
+        ((64 - self.column[x].leading_zeros() + 3) / 4) as usize
+    }
+
+    fn fall(&mut self, x: usize, v: u64) {
+        let h = self.height(x);
+        if h == 16 { self.dead = true; return; }
+        self.column[x] ^= v << (h * 4);
+    }
+
+    pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
+        self.fall(pos, v);
+        let changed = 1 << pos;
+        let chains = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_chain_result(chains)
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
@@ -57,10 +78,21 @@ impl Board {
         //     }
         // }
 
+        let mut changed = 0;
+        let pattern = rotate(pattern, rot);
+        (0..2).for_each(|d| {
+            pattern.iter().rev().for_each(|p| {
+                if p[d] == 0 { return; }
+                self.fall(pos + d, p[d].into());
+                changed |= 1 << (pos + d);
+            });
+        });
+
         // fixed changed
-        let chains = self.vanish(1 << pos | 1 << (pos+1));
+        let chains = self.vanish(changed);
         score_calculator::ScoreCalculator::calc_chain_result(chains)
-        // unimplemented!()
+
+        // score_calculator::ScoreCalculator::calc_chain_result(0)
     }
 
     pub fn use_skill(&mut self) -> action::ActionResult {
@@ -134,7 +166,7 @@ impl Board {
             remove_mask[W-1] |= r;
             remove_mask[W-1] |= r >> 4;
 
-            eprintln!("{:?}", self);
+            // eprintln!("{:?}", self);
             changed = 0;
             for i in 0..remove_mask.len() {
                 if remove_mask[i] != 0 {
@@ -154,41 +186,35 @@ impl Board {
     }
 
     pub fn fall_obstacle(&mut self) {
-        // if self.is_dead() {
-        //     return;
-        // }
-        // for x in 0..W-1 {
-        //     let y = self.height[x as usize] as i32;
-        //     self[(x,y)] = OBSTACLE;
-        //     self.height[x as usize] += 1;
-        // }
-        unimplemented!()
+        for x in 0..W {
+            self.fall(x, OBSTACLE);
+        }
     }
 
     pub fn is_dead(&self) -> bool {
-        // *self.height.iter().max().unwrap() as i32 > DEAD_LINE_Y
-        unimplemented!()
+        self.dead
     }
 
-    pub fn max_height(&self) -> u8 {
-        // *self.height.iter().max().unwrap()
-        unimplemented!()
+    pub fn max_height(&self) -> usize {
+        (0..W).map(|x| self.height(x)).max().unwrap()
     }
 }
 
 impl std::fmt::Debug for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        // write!(f, "Point {{ x: {}, y: {} }}", self.x, self.y)
-        let mut res = String::new();
+        let res = writeln!(f, "dump board");
+        writeln!(f, "{:?}", self.column);
         for y in (0..H).rev() {
+            // let mut res = String::new();
             self.column.iter().for_each(|c| {
                 let c = c >> (y * 4) & 0xF;
                 let c = if c > VANISH { 'X' } else { std::char::from_digit(c as u32, 10).unwrap() };
-                res += &c.to_string();
+                // res += &c.to_string();
+                write!(f, "{}", c);
             });
-            res += "\n";
+            writeln!(f, "");
         }
-        write!(f, "{}", res)
+        res
     }
 }
 
@@ -243,13 +269,23 @@ impl PartialEq for Board {
 impl Eq for Board {}
 
 #[test]
-fn board_test() {
+fn board_test_1() {
+    let mut board = Board::new();
+    board.column[0] = 0x07B1819;
+    board.column[1] = 0x0008832;
+    board.put(&[[1,9],[0,0]], 0, 0);
+    // eprintln!("{:?}", board);
+    assert_eq!(board.column, [27, 136, 0, 0, 0, 0, 0, 0, 0, 0]);
+}
+
+#[test]
+fn board_test_2() {
     let mut board = Board::new();
     board.column[0] = 0x17B1819;
     board.column[1] = 0x0098832;
-    // let rensa = board.put(&[[9,5],[0,3]], 8, 3);
     let rensa = board.put(&[[9,5],[0,3]], 1, 3);
-    eprintln!("{:?}", board);
+    // eprintln!("{:?}", board);
+    assert_eq!(board.column, [11, 1416, 3, 0, 0, 0, 0, 0, 0, 0]);
 }
 
 // #[test]

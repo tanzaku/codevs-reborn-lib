@@ -34,7 +34,7 @@ impl ScoreCalculator {
                 skill_guage[i+1] = 12 + 2 * (i+1) as i32;
             }
         }
-        eprintln!("ScoreCalculator: {} {}", bomb_obstacle[5], chian_obstacle[5]);
+        // eprintln!("ScoreCalculator: {} {}", bomb_obstacle[5], chian_obstacle[5]);
         Self {
             bomb_obstacle,
             chian_obstacle,
