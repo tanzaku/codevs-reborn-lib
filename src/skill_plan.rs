@@ -92,7 +92,7 @@ impl SkillPlan {
                                     // maximize
                                     result.obstacle * 1000
                                     + skill_guage_score
-                                    - player.board.max_height() as i32 * 10
+                                    // - player.board.max_height() as i32 * 10
                                     + (self.rand.next() & 0xF) as i32
                                 );
                     let mut actions = b.actions.clone();

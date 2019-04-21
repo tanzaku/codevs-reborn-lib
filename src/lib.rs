@@ -9,3 +9,4 @@ pub mod rand;
 pub mod score_calculator;
 pub mod player;
 pub mod types;
+pub mod consts;
