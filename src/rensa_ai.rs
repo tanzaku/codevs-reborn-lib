@@ -1,9 +1,5 @@
 
 
-// Wの値が紛らわしい
-const W: i32 = 10;
-const H: i32 = 16;
-
 use std::str::FromStr;
 use std::io::Read;
 use std::io::StdinLock;
@@ -12,8 +8,7 @@ use super::action;
 use super::board;
 use super::player;
 use super::rensa_plan;
-
-const MAX_TURN: usize = 500;
+use super::consts::{W,H,MAX_TURN};
 
 pub struct RensaAi<'a> {
     cur_turn: usize,
@@ -59,7 +54,7 @@ impl<'a> RensaAi<'a> {
     }
 
     fn read_board(&mut self) -> board::Board {
-        let mut board = [0; (W * H) as usize];
+        let mut board = [0; W * H];
         (0..W*H).for_each(|p| { board[p as usize] = self.read1::<u8>(); });
         board::Board::from_board(board)
     }
@@ -107,12 +102,22 @@ impl<'a> RensaAi<'a> {
     fn think(&mut self) -> action::Action {
         if !self.rensa_plan.can_replay(&self.player) || self.new_obstscle() {
         // if !self.rensa_plan.exists() {
-            self.rensa_plan.calc_rensa_plan(self.cur_turn, &self.player);
+            let max_turn = if self.cur_turn == 0 { 13 } else { 10 };
+            let think_time_in_sec = if self.cur_turn == 0 { 19 } else { 15 };
+            let context = rensa_plan::PlanContext {
+                plan_start_turn: self.cur_turn,
+                max_turn: max_turn,
+                think_time_in_sec,
+                player: self.player.clone(),
+                enemy_send_obstacles: vec![0; max_turn],
+            };
+            self.rensa_plan.calc_rensa_plan(&context);
         }
         self.rensa_plan.replay()
     }
 
     fn new_obstscle(&self) -> bool {
-        self.player.obstacle >= W && (self.prev_obstacle_stock - W) / W != self.player.obstacle / W
+        let w = W as i32;
+        self.player.obstacle >= w && (self.prev_obstacle_stock - w) / w != self.player.obstacle / w
     }
 }

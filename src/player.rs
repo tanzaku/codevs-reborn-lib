@@ -51,7 +51,11 @@ impl Player {
         result
     }
 
+    pub fn add_obstacles(&mut self, obstacle: i32) {
+        self.obstacle += obstacle;
+    }
+
     pub fn can_use_skill(&self) -> bool {
-        self.skill_guage >= 80 + 1
+        self.skill_guage >= 80
     }
 }

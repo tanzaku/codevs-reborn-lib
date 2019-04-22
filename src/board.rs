@@ -63,21 +63,6 @@ impl Board {
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
-        // assert!(pos + pattern.len() <= W as usize);
-        // let pattern = rotate(pattern, rot);
-        // let mut dh = [0; 2];
-        // for dx in 0..pattern[0].len() {
-        //     let x = pos + dx;
-        //     for dy in (0..pattern.len()).rev() {
-        //         if pattern[dy][dx] != 0 {
-        //             let p = self.top_empty_pos(x);
-        //             self.board[p] = pattern[dy][dx];
-        //             self.height[x] += 1;
-        //             dh[dx] += 1;
-        //         }
-        //     }
-        // }
-
         let mut changed = 0;
         let pattern = rotate(pattern, rot);
         (0..2).for_each(|d| {
@@ -91,30 +76,55 @@ impl Board {
         // fixed changed
         let chains = self.vanish(changed);
         score_calculator::ScoreCalculator::calc_chain_result(chains)
-
-        // score_calculator::ScoreCalculator::calc_chain_result(0)
     }
 
     pub fn use_skill(&mut self) -> action::ActionResult {
-        // let mut set = HashSet::new();
-        // for x in 0..W-1 {
-        //     for y in 0..self.height[x as usize] as i32 {
-        //         let p = y * W + x;
-        //         if self[p] != 5 {
-        //             continue;
-        //         }
-        //         DIRS9.into_iter().filter(|d| self[p+*d] < VANISH).for_each(|d| { set.insert(p + d); });
-        //     }
-        // }
-        // if set.is_empty() {
-        //     return action::ActionResult::new(0, 0, 0);
-        // }
-        // set.iter().for_each(|p| { self[*p] = 0; });
-        // self.fall_down();
-        // let bombed_block = set.len() as u8;
-        // let chains = self.vanish();
-        // score_calculator::ScoreCalculator::calc_bomb_result(bombed_block, chains)
-        unimplemented!()
+        let mut vanished = [0; W];
+
+        (0..W).for_each(|x| {
+            let fives = Self::calc_five_mask(self.column[x]);
+            let bombed_mask = fives << 4 | fives | fives >> 4;
+            vanished[x] |= bombed_mask;
+            if x > 0 { vanished[x-1] |= bombed_mask; }
+            if x < W - 1 { vanished[x+1] |= bombed_mask; }
+        });
+
+        let mut bombed_block = 0;
+        (0..W).for_each(|x| {
+            let obstacle_mask = Self::calc_obstacle_mask(self.column[x]);
+            let empty_mask = Self::calc_empty_mask(self.column[x]);
+            vanished[x] &= !obstacle_mask;
+            vanished[x] &= !empty_mask;
+            bombed_block += vanished[x].count_ones() / 4;   // 4bit maskなので4で割る
+        });
+
+        let changed = self.fall_by_mask(&vanished);
+        let chains = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, chains)
+    }
+
+    fn calc_five_mask(c: u64) -> u64 {
+        // 5 -> 0101
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = c & (d >> 1) & (c >> 2) & (d >> 3) & mask;
+        v * 0x0F
+    }
+
+    fn calc_obstacle_mask(c: u64) -> u64 {
+        // 11 -> 1011
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = c & (c >> 1) & (d >> 2) & (c >> 3) & mask;
+        v * 0x0F
+    }
+
+    fn calc_empty_mask(c: u64) -> u64 {
+        // 0 -> 0000
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = d & (d >> 1) & (d >> 2) & (d >> 3) & mask;
+        v * 0x0F
     }
 
     fn calc_remove0(c1: u64, c2: u64) -> u64 {
@@ -133,6 +143,20 @@ impl Board {
         let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
         let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
         v1 ^ v2
+    }
+
+    fn fall_by_mask(&mut self, mask: &[u64]) -> usize {
+        let mut changed = 0;
+        for i in 0..mask.len() {
+            if mask[i] != 0 {
+                changed |= 1 << i;
+            }
+            unsafe {
+                use std::arch::x86_64::*;
+                self.column[i] = _pext_u64(self.column[i], !mask[i]);
+            }
+        }
+        changed
     }
 
     fn vanish(&mut self, changed: usize) -> u8 {
@@ -167,16 +191,7 @@ impl Board {
             remove_mask[W-1] |= r >> 4;
 
             // eprintln!("{:?}", self);
-            changed = 0;
-            for i in 0..remove_mask.len() {
-                if remove_mask[i] != 0 {
-                    changed |= 1 << i;
-                }
-                unsafe {
-                    use std::arch::x86_64::*;
-                    self.column[i] = _pext_u64(self.column[i], !remove_mask[i]);
-                }
-            }
+            changed = self.fall_by_mask(&remove_mask);
             if changed == 0 {
                 break;
             }
@@ -283,7 +298,7 @@ fn board_test_2() {
     let mut board = Board::new();
     board.column[0] = 0x17B1819;
     board.column[1] = 0x0098832;
-    let rensa = board.put(&[[9,5],[0,3]], 1, 3);
+    board.put(&[[9,5],[0,3]], 1, 3);
     // eprintln!("{:?}", board);
     assert_eq!(board.column, [11, 1416, 3, 0, 0, 0, 0, 0, 0, 0]);
 }

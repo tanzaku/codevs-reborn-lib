@@ -1,9 +1,5 @@
 
 
-// Wの値が紛らわしい
-const W: i32 = 10;
-const H: i32 = 16;
-
 use std::str::FromStr;
 use std::io::Read;
 use std::io::StdinLock;
@@ -12,10 +8,9 @@ use super::action;
 use super::board;
 use super::player;
 use super::skill_plan;
+use super::consts::{W,H,MAX_TURN};
 
-const MAX_TURN: usize = 500;
-
-pub struct RensaAi<'a> {
+pub struct SkillAi<'a> {
     cur_turn: usize,
     stdin_lock: StdinLock<'a>,
     packs: Vec<[[u8; 2]; 2]>,
@@ -25,7 +20,7 @@ pub struct RensaAi<'a> {
     skill_plan: skill_plan::SkillPlan,
 }
 
-impl<'a> RensaAi<'a> {
+impl<'a> SkillAi<'a> {
     pub fn new(lock: StdinLock<'a>) -> Self {
         Self {
             cur_turn: 0,
@@ -69,15 +64,17 @@ impl<'a> RensaAi<'a> {
 
         self.cur_turn = self.read1();
         // eprintln!("start read {}", self.cur_turn);
-        let rest_time_in_milli = self.read1::<u32>();
+        let _rest_time_in_milli = self.read1::<u32>();
         self.player.obstacle = self.read1();
         self.player.skill_guage = self.read1();
+        let _player_score = self.read1::<u32>();
         self.player.board = self.read_board();
         self.read1::<String>();
 
-        let rest_time_in_milli = self.read1::<u32>();
+        let _rest_time_in_milli = self.read1::<u32>();
         self.enemy.obstacle = self.read1();
         self.enemy.skill_guage = self.read1();
+        let _enemy_score = self.read1::<u32>();
         self.enemy.board = self.read_board();
         self.read1::<String>();
     }
@@ -88,29 +85,20 @@ impl<'a> RensaAi<'a> {
         loop {
             self.read_turn_input();
             let act = self.think();
-
-            // eprintln!("turn={}, obs={}, prev_obs={}", self.cur_turn, self.obstacle_stock, self.prev_obstacle_stock);
-            // eprintln!("height={}", self.board.max_height());
-            // eprintln!("{:?}", self.board);
-
-            // self.player.put(&self.packs[self.cur_turn], &act);
             println!("{}", act);
-            // assert!(self.cur_turn < 3);
         }
-        // while let Some(act) = self.think() {
-        //     println!("{}", act);
-        // }
     }
 
     fn think(&mut self) -> action::Action {
-        if !self.skill_plan.can_replay(&self.player) || self.new_obstscle() {
-        // if !self.skill_plan.exists() {
-            self.skill_plan.calc_skill_plan(self.cur_turn, &self.player);
-        }
+        let max_turn = 3;
+        let context = skill_plan::PlanContext {
+            plan_start_turn: self.cur_turn,
+            max_turn: max_turn,
+            think_time_in_sec: 1,
+            player: self.player.clone(),
+            enemy_send_obstacles: vec![0; max_turn],
+        };
+        self.skill_plan.calc_skill_plan(&context);
         self.skill_plan.replay()
-    }
-
-    fn new_obstscle(&self) -> bool {
-        self.player.obstacle >= W && (self.prev_obstacle_stock - W) / W != self.player.obstacle / W
     }
 }
