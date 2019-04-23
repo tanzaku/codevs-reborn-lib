@@ -3,12 +3,13 @@
 use std::convert::From;
 
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum Action {
     PutBlock { pos: usize, rot: usize },
     UseSkill,
 }
 
+#[derive(Eq, PartialEq, Clone)]
 pub struct ActionResult {
     pub chains: u8,
     pub obstacle: i32,
@@ -39,6 +40,12 @@ impl From<u8> for Action {
         } else {
             unreachable!()
         }
+    }
+}
+
+impl From<&u8> for Action {
+    fn from(item: &u8) -> Self {
+        Action::from(*item)
     }
 }
 
