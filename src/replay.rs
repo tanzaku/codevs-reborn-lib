@@ -36,11 +36,16 @@ impl Replay {
         }
 
         let mut p = player.clone();
+        let mut illegal_action = false;
         let result = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)| {
-            p.put(pack, &a.into())
+            let a = a.into();
+            if a == action::Action::UseSkill && !p.can_use_skill() {
+                illegal_action = true;
+            }
+            p.put(pack, &a)
         }).last().unwrap();
 
-        result == self.expected_result
+        !illegal_action && result == self.expected_result
     }
 
     pub fn init(&mut self, packs: &[[[u8; 2]; 2]], actions: &[u8], expected_result: &action::ActionResult) {

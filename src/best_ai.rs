@@ -194,8 +194,7 @@ impl<'a> BestAi<'a> {
         self.replay_player.replay()
     }
 
-    // fn search_best(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: usize) -> Option<replay::Replay> {
-    //     let mut think_time_in_sec = if self.cur_turn == 0 { 18 } else { 15 };
+    // fn search_best(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: u64) -> Option<replay::Replay> {
     //     let mut enemy_send_obstacles = vec![0; max_turn];
     //     // if max_turn > 12 {
     //     //     enemy_send_obstacles[12] = 0;
