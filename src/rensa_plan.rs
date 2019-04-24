@@ -45,6 +45,7 @@ pub struct PlanContext {
     pub player: player::Player,
     pub enemy_send_obstacles: Vec<i32>,
     pub packs: Vec<[[u8; 2]; 2]>,
+    pub stop_search_if_3_chains: bool,
 }
 
 // pub fn calc_rensa_plan(&mut self, cur_turn: usize, max_fire_turn: usize, player: &player::Player, ) {
@@ -103,6 +104,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                         return;
                     }
 
+                    let stop_search = result.chains >= 3;
+
                     let mut actions = b.actions.clone();
                     actions.push(a.into());
 
@@ -111,9 +114,9 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                         bests[search_turn] = (BeamState::new(player.clone(), score, actions.clone()), result);
                     }
 
-                    // if result.chains >= 3 {
-                    //     return;
-                    // }
+                    if context.stop_search_if_3_chains && stop_search {
+                        return;
+                    }
 
                     // ここら辺の判断は外に出す
                     // if context.plan_start_turn == 0 && player.board.max_height() >= H - 3 {

@@ -26,6 +26,10 @@ impl Replay {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.actions.is_empty()
+    }
+
     pub fn can_replay(&self, player: &player::Player) -> bool {
         if self.actions.is_empty() {
             return false;

@@ -155,6 +155,7 @@ impl<'a> BestAi<'a> {
                 player: self.player.clone(),
                 enemy_send_obstacles,
                 packs: self.packs.clone(),
+                stop_search_if_3_chains: true,
             };
 
             let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
@@ -174,6 +175,10 @@ impl<'a> BestAi<'a> {
             match choosed {
                 None => return Self::resign(),
                 Some(s) => {
+                    if s.0.actions.is_empty() {
+                        return Self::resign();
+                    }
+
                     self.replay_player.init(&self.packs[self.cur_turn..], &s.0.actions, &s.1);
                     eprintln!("rensa: {} {} {}", self.cur_turn, s.0.actions.len(), s.1.chains);
                 },
@@ -184,37 +189,49 @@ impl<'a> BestAi<'a> {
     }
 
     fn kill_bommer(&mut self) -> Option<action::Action> {
+        if self.player.skill_guage >= 80 {
+            self.mode.pop();
+            return None;
+        }
+
         if self.enemy.skill_guage <= 20 {
             self.mode.pop();
             return None;
         }
 
-        let max_turn = 3;
-        let think_time_in_sec = 1;
-        let enemy_send_obstacles = vec![0; max_turn];
+        if self.replay_player.is_empty() {
+            let max_turn = 5;
+            let think_time_in_sec = 3;
+            let enemy_send_obstacles = vec![0; max_turn];
 
-        let context = rensa_plan::PlanContext {
-            plan_start_turn: self.cur_turn,
-            max_turn: max_turn,
-            think_time_in_sec,
-            player: self.player.clone(),
-            enemy_send_obstacles,
-            packs: self.packs.clone(),
-        };
+            let context = rensa_plan::PlanContext {
+                plan_start_turn: self.cur_turn,
+                max_turn: max_turn,
+                think_time_in_sec,
+                player: self.player.clone(),
+                enemy_send_obstacles,
+                packs: self.packs.clone(),
+                stop_search_if_3_chains: false,
+            };
 
-        let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
-            result.skill_guage * 100 + result.chains as i32
-        });
+            let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
+                // result.skill_guage * 10000 + result.chains as i32 * 10 - search_turn as i32
+                player.decrease_skill_guage * 10000 + result.chains as i32 * 10
+            });
 
-        let best = states.into_iter().max_by_key(|s| s.0.score).unwrap();
-        self.replay_player.init(&self.packs[self.cur_turn..], &best.0.actions, &best.1);
-        eprintln!("kill_bommer: {} {} {}", self.cur_turn, best.0.actions.len(), best.1.chains);
+            let best = states.into_iter().max_by_key(|s| s.0.player.decrease_skill_guage).unwrap();
+            self.replay_player.init(&self.packs[self.cur_turn..], &best.0.actions, &best.1);
+            eprintln!("kill_bommer: {} {} {}", self.cur_turn, best.0.actions.len(), best.0.player.decrease_skill_guage);
+        }
 
         self.replay_player.replay()
     }
 
     fn bommer(&mut self) -> Option<action::Action> {
-        self.replay_player.clear();
+        if self.player.skill_guage < 80 {
+            self.mode.pop();
+            return None;
+        }
 
         let max_turn = 3;
         let context = skill_plan::PlanContext {
@@ -229,10 +246,6 @@ impl<'a> BestAi<'a> {
         skill_plan.set_pack(self.packs.clone());
         skill_plan.calc_skill_plan(&context);
         let replay = if self.player.can_use_skill() { action::Action::UseSkill } else { skill_plan.replay() };
-
-        if replay == action::Action::UseSkill {
-            self.mode.pop();
-        }
 
         Some(replay)
     }
