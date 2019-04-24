@@ -125,7 +125,7 @@ impl<'a> BestAi<'a> {
     }
 
     fn rensa(&mut self) -> Option<action::Action> {
-        if self.player.skill_guage >= 80 {
+        if self.should_bombed() {
             self.mode.push(BestAiMode::ModeBommer);
             return None;
         }
@@ -189,7 +189,7 @@ impl<'a> BestAi<'a> {
     }
 
     fn kill_bommer(&mut self) -> Option<action::Action> {
-        if self.player.skill_guage >= 80 {
+        if self.should_bombed() {
             self.mode.pop();
             return None;
         }
@@ -233,21 +233,32 @@ impl<'a> BestAi<'a> {
             return None;
         }
 
-        let max_turn = 3;
-        let context = skill_plan::PlanContext {
-            plan_start_turn: self.cur_turn,
-            max_turn: max_turn,
-            think_time_in_sec: 1,
-            player: self.player.clone(),
-            enemy_send_obstacles: vec![0; max_turn],
-        };
-        let mut skill_plan = skill_plan::SkillPlan::new();
+        // let max_turn = 3;
+        // let context = skill_plan::PlanContext {
+        //     plan_start_turn: self.cur_turn,
+        //     max_turn: max_turn,
+        //     think_time_in_sec: 1,
+        //     player: self.player.clone(),
+        //     enemy_send_obstacles: vec![0; max_turn],
+        // };
+        // let mut skill_plan = skill_plan::SkillPlan::new();
 
-        skill_plan.set_pack(self.packs.clone());
-        skill_plan.calc_skill_plan(&context);
-        let replay = if self.player.can_use_skill() { action::Action::UseSkill } else { skill_plan.replay() };
+        // skill_plan.set_pack(self.packs.clone());
+        // skill_plan.calc_skill_plan(&context);
+        // let replay = if self.player.can_use_skill() { action::Action::UseSkill } else { skill_plan.replay() };
+        let replay = action::Action::UseSkill;
 
         Some(replay)
+    }
+
+    fn should_bombed(&self) -> bool {
+        if self.player.skill_guage < 80 {
+            return false;
+        }
+
+        let mut b = self.player.board.clone();
+        let result = b.use_skill();
+        result.obstacle >= 50
     }
 
     fn resign() -> Option<action::Action> {
