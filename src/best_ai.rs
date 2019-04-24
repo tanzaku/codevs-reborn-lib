@@ -147,7 +147,7 @@ impl<'a> BestAi<'a> {
 
             // emergency
             if self.rest_time_in_milli < 30 * 1000 {
-                think_time_in_sec = 2;
+                think_time_in_sec = 1;
             }
 
             let context = rensa_plan::PlanContext {
@@ -256,8 +256,12 @@ impl<'a> BestAi<'a> {
 
         if self.replay_player.is_empty() {
             let max_turn = 5;
-            let think_time_in_sec = 3;
+            let mut think_time_in_sec = 3;
             let enemy_send_obstacles = vec![0; max_turn];
+
+            if self.rest_time_in_milli < 30 * 1000 {
+                think_time_in_sec = 1;
+            }
 
             let context = rensa_plan::PlanContext {
                 plan_start_turn: self.cur_turn,
