@@ -213,6 +213,12 @@ impl Board {
     pub fn max_height(&self) -> usize {
         (0..W).map(|x| self.height(x)).max().unwrap()
     }
+
+    pub fn hash(&self) -> u64 {
+        let mut h = 0;
+        self.column.iter().for_each(|c| h += h * 31 + c);
+        h
+    }
 }
 
 impl std::fmt::Debug for Board {

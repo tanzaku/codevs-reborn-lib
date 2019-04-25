@@ -58,4 +58,8 @@ impl Player {
     pub fn can_use_skill(&self) -> bool {
         self.skill_guage >= 80
     }
+
+    pub fn hash(&self) -> u64 {
+        self.board.hash()
+    }
 }

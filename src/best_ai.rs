@@ -127,18 +127,18 @@ impl<'a> BestAi<'a> {
     }
 
     fn rensa(&mut self) -> Option<action::Action> {
-        if self.should_bombed() {
-            self.mode.push(BestAiMode::ModeBommer);
-            return None;
-        }
+        // if self.should_bombed() {
+        //     self.mode.push(BestAiMode::ModeBommer);
+        //     return None;
+        // }
 
-        if self.enemy.skill_guage >= 50 {
-            self.mode.push(BestAiMode::ModeBommerKiller);
-            return None;
-        }
-        
+        // if self.enemy.skill_guage >= 50 {
+        //     self.mode.push(BestAiMode::ModeBommerKiller);
+        //     return None;
+        // }
+
         if !self.replay_player.can_replay(&self.player) {
-            let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
+            let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
             let mut think_time_in_sec = if self.cur_turn == 0 { 18 } else { 15 };
             let mut enemy_send_obstacles = vec![0; max_turn];
             // if max_turn > 12 {
@@ -150,97 +150,86 @@ impl<'a> BestAi<'a> {
                 think_time_in_sec = 1;
             }
 
-            let context = rensa_plan::PlanContext {
-                plan_start_turn: self.cur_turn,
-                max_turn: max_turn,
-                think_time_in_sec,
-                player: self.player.clone(),
-                enemy_send_obstacles,
-                packs: self.packs.clone(),
-                stop_search_if_3_chains: true,
-            };
-
-            let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
-                let obstacle_score = std::cmp::min(result.obstacle, 60);
-                (obstacle_score * 100000 - search_turn as i32 * 1000 + result.obstacle * 16 + (self.rand.next() & 0xF) as i32)
-            });
-
-            let mut max = -1;
-            let mut choosed = None;
-            states.into_iter().for_each(|s| {
-                if max < std::cmp::min(60, s.1.obstacle) {
-                    max = std::cmp::min(60, s.1.obstacle);
-                    choosed = Some(s);
-                }
-            });
-
-            match choosed {
-                None => return Self::resign(),
-                Some(s) => {
-                    if s.0.actions.is_empty() {
-                        return Self::resign();
-                    }
-
-                    self.replay_player.init(&self.packs[self.cur_turn..], &s.0.actions, &s.1);
-                    eprintln!("rensa: {} {} {}", self.cur_turn, s.0.actions.len(), s.1.chains);
-                },
+            let replay = self.replay_player.get_actions();
+            let replay = vec![];
+            let best = self.search_best(self.player.clone(), max_turn, think_time_in_sec, enemy_send_obstacles, replay);
+            if let Some(best) = best {
+                self.replay_player = best;
+                // eprintln!("rensa: {} {} {}", self.cur_turn, s.0.actions.len(), s.1.chains);
+                eprintln!("think done: {} {}", self.cur_turn, self.replay_player.get_obstacles().last().unwrap());
+            } else {
+                return Self::resign();
             }
         }
 
-        if self.cur_turn == 8 {
-            ;
-        }
+        // if self.replay_player.rest_turn() < 5 {
+        //     let max_turn = self.replay_player.rest_turn();
+        //     let think_time_in_sec = 2;
+        //     let mut send_obstacles = self.replay_player.get_obstacles();
+        //     send_obstacles.resize(max_turn, 0);
+        //     if let Some(replay) = self.search_best(self.enemy.clone(), max_turn, think_time_in_sec, send_obstacles.clone()) {
+        //         let s = send_obstacles.clone();
+
+        //         self.replay_enemy = replay;
+
+        //         let mut send_obstacles = self.replay_enemy.get_obstacles();
+        //         let max_turn = self.replay_player.rest_turn();
+        //         let think_time_in_sec = 2;
+        //         send_obstacles.resize(max_turn, 0);
+        //         if let Some(replay) = self.search_best(self.player.clone(), max_turn, think_time_in_sec, send_obstacles.clone()) {
+        //             self.replay_player = replay;
+        //         }
+        //         eprintln!("rensa vs: {} {:?} {:?} {:?}", self.cur_turn, send_obstacles, s, self.replay_player.get_obstacles());
+        //     }
+        // }
 
         self.replay_player.replay()
     }
 
-    // fn search_best(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: u64) -> Option<replay::Replay> {
-    //     let mut enemy_send_obstacles = vec![0; max_turn];
-    //     // if max_turn > 12 {
-    //     //     enemy_send_obstacles[12] = 0;
-    //     // }
+    fn search_best(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: u64, enemy_send_obstacles: Vec<i32>, replay: Vec<action::Action>) -> Option<replay::Replay> {
+        // let mut enemy_send_obstacles = vec![0; max_turn];
 
-    //     // emergency
-    //     if self.rest_time_in_milli < 30 * 1000 {
-    //         think_time_in_sec = 5;
-    //     }
+        let context = rensa_plan::PlanContext {
+            plan_start_turn: self.cur_turn,
+            max_turn,
+            think_time_in_sec,
+            player: player.clone(),
+            enemy_send_obstacles,
+            packs: self.packs.clone(),
+            stop_search_if_3_chains: true,
+            replay,
+        };
 
-    //     let context = rensa_plan::PlanContext {
-    //         plan_start_turn: self.cur_turn,
-    //         max_turn,
-    //         think_time_in_sec,
-    //         player,
-    //         enemy_send_obstacles,
-    //         packs: self.packs.clone(),
-    //         stop_search_if_3_chains: true,
-    //     };
+        let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
+            let obstacle_score = std::cmp::min(result.obstacle, 60);
+            let obstacle_score = result.obstacle;
+            (obstacle_score * 100000 - search_turn as i32 * 1000 + result.obstacle * 16 + (self.rand.next() & 0xF) as i32)
+        });
 
-    //     let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
-    //         let obstacle_score = std::cmp::min(result.obstacle, 60);
-    //         (obstacle_score * 100000 - search_turn as i32 * 1000 + result.obstacle * 16 + (self.rand.next() & 0xF) as i32)
-    //     });
+        let mut max = -1;
+        let mut choosed = None;
+        states.into_iter().for_each(|s| {
+            if max < std::cmp::min(60, s.1.obstacle) {
+                max = std::cmp::min(60, s.1.obstacle);
+                choosed = Some(s);
+            }
+        });
 
-    //     let mut max = -1;
-    //     let mut choosed = None;
-    //     states.into_iter().for_each(|s| {
-    //         if max < std::cmp::min(60, s.1.obstacle) {
-    //             max = std::cmp::min(60, s.1.obstacle);
-    //             choosed = Some(s);
-    //         }
-    //     });
-
-    //     match choosed {
-    //         None => return Self::resign(),
-    //         Some(s) => {
-    //             if s.0.actions.is_empty() {
-    //                 return Self::resign();
-    //             }
-
-    //             self.replay_player.init(&self.packs[self.cur_turn..], &s.0.actions, &s.1);
-    //             eprintln!("rensa: {} {} {}", self.cur_turn, s.0.actions.len(), s.1.chains);
-    //         },
-    //     }
-    // }
+        let mut replay = replay::Replay::new();
+        match choosed {
+            None => None,
+            Some(s) => {
+                if s.0.actions.is_empty() {
+                    None
+                } else {
+                    let last_turn = self.cur_turn + s.0.actions.len();
+                    let packs = &self.packs[self.cur_turn..last_turn];
+                    replay.init(&player, packs, &s.0.actions);
+                    Some(replay)
+                }
+            }
+        }
+    }
 
     fn kill_bommer(&mut self) -> Option<action::Action> {
         if self.should_bombed() {
@@ -270,6 +259,7 @@ impl<'a> BestAi<'a> {
                 enemy_send_obstacles,
                 packs: self.packs.clone(),
                 stop_search_if_3_chains: false,
+                replay: vec![],
             };
 
             let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
@@ -278,7 +268,9 @@ impl<'a> BestAi<'a> {
             });
 
             let best = states.into_iter().max_by_key(|s| s.0.player.decrease_skill_guage).unwrap();
-            self.replay_player.init(&self.packs[self.cur_turn..], &best.0.actions, &best.1);
+            let last_turn = self.cur_turn + best.0.actions.len();
+            let packs = &self.packs[self.cur_turn..last_turn];
+            self.replay_player.init(&self.player, packs, &best.0.actions);
             eprintln!("kill_bommer: {} {} {}", self.cur_turn, best.0.actions.len(), best.0.player.decrease_skill_guage);
         }
 

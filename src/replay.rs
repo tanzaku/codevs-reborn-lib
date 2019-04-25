@@ -12,7 +12,7 @@ use super::consts::{W,H,MAX_TURN};
 
 
 pub struct Replay {
-    expected_result: action::ActionResult,
+    expected_results: VecDeque<action::ActionResult>,
     packs: VecDeque<[[u8; 2]; 2]>,
     actions: VecDeque<u8>,
 }
@@ -20,7 +20,7 @@ pub struct Replay {
 impl Replay {
     pub fn new() -> Self {
         Self {
-            expected_result: action::ActionResult::new(0, 0, 0),
+            expected_results: VecDeque::new(),
             packs: VecDeque::new(),
             actions: VecDeque::new(),
         }
@@ -45,22 +45,41 @@ impl Replay {
             p.put(pack, &a)
         }).last().unwrap();
 
-        !illegal_action && result == self.expected_result
+        !illegal_action && &result == self.expected_results.back().unwrap()
     }
 
-    pub fn init(&mut self, packs: &[[[u8; 2]; 2]], actions: &[u8], expected_result: &action::ActionResult) {
+    pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], actions: &[u8]) {
         self.packs = packs.to_vec().into();
         self.actions = actions.to_vec().into();
-        self.expected_result = expected_result.clone();
+        let mut p = player.clone();
+        self.expected_results = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)|  p.put(pack, &a.into())).collect();
     }
 
     pub fn replay(&mut self) -> Option<action::Action> {
         self.packs.pop_front();
+        self.expected_results.pop_front();
         self.actions.pop_front().map(|a| a.into())
     }
 
     pub fn clear(&mut self) {
         self.packs.clear();
         self.actions.clear();
+        self.expected_results.clear();
+    }
+
+    pub fn get_actions(&self) -> Vec<action::Action> {
+        self.actions.iter().map(|a| a.into()).collect()
+    }
+
+    pub fn get_results(&self) -> Vec<action::ActionResult> {
+        self.expected_results.clone().into()
+    }
+
+    pub fn get_obstacles(&self) -> Vec<i32> {
+        self.get_results().into_iter().map(|r| r.obstacle).collect()
+    }
+
+    pub fn rest_turn(&self) -> usize {
+        self.actions.len()
     }
 }
