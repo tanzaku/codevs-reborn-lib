@@ -127,15 +127,15 @@ impl<'a> BestAi<'a> {
     }
 
     fn rensa(&mut self) -> Option<action::Action> {
-        // if self.should_bombed() {
-        //     self.mode.push(BestAiMode::ModeBommer);
-        //     return None;
-        // }
+        if self.should_bombed() {
+            self.mode.push(BestAiMode::ModeBommer);
+            return None;
+        }
 
-        // if self.enemy.skill_guage >= 50 {
-        //     self.mode.push(BestAiMode::ModeBommerKiller);
-        //     return None;
-        // }
+        if self.enemy.skill_guage >= 50 {
+            self.mode.push(BestAiMode::ModeBommerKiller);
+            return None;
+        }
 
         if !self.replay_player.can_replay(&self.player) {
             let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
