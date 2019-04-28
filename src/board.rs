@@ -9,6 +9,13 @@ use super::score_calculator;
 
 use super::consts::{W,H,VANISH,OBSTACLE};
 
+pub struct Feature {
+    pub keima: i32,
+    pub keima2: i32,
+    pub tate: i32,
+    pub tate2: i32,
+}
+
 #[derive(Clone)]
 pub struct Board {
     column: [u64; W],
@@ -107,35 +114,42 @@ impl Board {
         score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, chains.0, chains.1)
     }
 
-    pub fn calc_pattern(&self) -> (u8, u8) {
-        let mut sum_keima = 0;
-        let mut sum_tate = 0;
+    pub fn calc_feature(&self) -> Feature {
+        let mut keima = 0;
+        let mut keima2 = 0;
+        let mut tate = 0;
+        let mut tate2 = 0;
         for i in 0..W-1 {
             let r = Self::calc_remove(self.column[i], self.column[i]<<8);
-            sum_tate += r.count_ones() / 4;
+            tate += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i]<<12);
-            sum_tate += r.count_ones() / 4;
+            tate2 += r.count_ones() / 4;
 
             let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
-            sum_keima += r.count_ones() / 4;
+            keima += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
-            sum_keima += r.count_ones() / 4;
+            keima += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
-            sum_keima += r.count_ones() / 4;
+            keima2 += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
-            sum_keima += r.count_ones() / 4;
+            keima2 += r.count_ones() / 4;
         }
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
-        sum_tate += r.count_ones() / 4;
+        tate += r.count_ones() / 4;
 
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
-        sum_tate += r.count_ones() / 4;
+        tate2 += r.count_ones() / 4;
         
-        (sum_keima as u8, sum_tate as u8)
+        Feature {
+            keima: keima as i32,
+            keima2: keima2 as i32,
+            tate: tate as i32,
+            tate2: tate2 as i32,
+        }
     }
 
     fn calc_five_mask(c: u64) -> u64 {

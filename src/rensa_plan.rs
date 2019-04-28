@@ -53,7 +53,7 @@ pub struct PlanContext {
 
 // pub fn calc_rensa_plan(&mut self, cur_turn: usize, max_fire_turn: usize, player: &player::Player, ) {
 pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(BeamState, action::ActionResult)>
-    where F: FnMut(&action::ActionResult, &player::Player, usize) -> i32
+    where F: FnMut(&action::ActionResult, &player::Player, usize, &board::Feature) -> i32
 {
     let timer = Instant::now();
 
@@ -91,7 +91,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
             let mut actions = b.actions.clone();
             actions.push(a.into());
 
-            let score = calc_score(&result, &player, search_turn);
+            let feature = player.board.calc_feature();
+            let score = calc_score(&result, &player, search_turn, &feature);
             if bests[search_turn].0.score < score {
                 bests[search_turn] = (BeamState::new(player.clone(), score, actions.clone()), result);
             }
@@ -101,7 +102,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                     let mut rensa_eval_board = player.clone();
                     // let result = rensa_eval_board.put(&fall, &fire_action);
                     let result = rensa_eval_board.put_one(v, x as usize);
-                    calc_score(&result, &player, search_turn)
+                    calc_score(&result, &player, search_turn, &feature)
                 }).max().unwrap()).max().unwrap();
                 // candidates.push(BeamState::new(player.clone(), max_score, actions.clone()));
                 heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score, actions.clone()));
@@ -167,7 +168,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                     let mut actions = b.actions.clone();
                     actions.push(a.into());
 
-                    let score = calc_score(&result, &player, search_turn);
+                    let feature = player.board.calc_feature();
+                    let score = calc_score(&result, &player, search_turn, &feature);
                     if bests[search_turn].0.score < score {
                         bests[search_turn] = (BeamState::new(player.clone(), score, actions.clone()), result);
                     }
@@ -190,14 +192,12 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                             let mut rensa_eval_board = player.clone();
                             // let result = rensa_eval_board.put(&fall, &fire_action);
                             let result = rensa_eval_board.put_one(v, x as usize);
-                            calc_score(&result, &player, search_turn)
+                            calc_score(&result, &player, search_turn, &feature)
                             // result.obstacle
                         }).max().unwrap()).max().unwrap();
                         // candidates.push(BeamState::new(player.clone(), max_score, actions.clone()));
 
-                        let pattern = player.board.calc_pattern();
-                        let pattern_score = (pattern.0 + pattern.1) as i32 * 10000;
-                        heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score + pattern_score, actions.clone()));
+                        heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score, actions.clone()));
                     }
                 });
 

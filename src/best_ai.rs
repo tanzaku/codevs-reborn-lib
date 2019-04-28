@@ -132,14 +132,14 @@ impl<'a> BestAi<'a> {
             return None;
         }
 
-        if self.enemy.skill_guage >= 50 {
+        if self.enemy.skill_guage >= 50 && self.cur_turn > 15 {
             self.mode.push(BestAiMode::ModeBommerKiller);
             return None;
         }
 
         if !self.replay_player.can_replay(&self.player) {
             let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
-            let mut think_time_in_sec = if self.cur_turn == 0 { 18 } else { 15 };
+            let mut think_time_in_sec = if self.cur_turn <= 10 { 18 } else { 15 };
             let mut enemy_send_obstacles = vec![0; max_turn];
             // if max_turn > 12 {
             //     enemy_send_obstacles[12] = 0;
@@ -212,12 +212,21 @@ impl<'a> BestAi<'a> {
             verbose: false,
         };
 
-        let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
-            let obstacle_score = std::cmp::min(result.obstacle, 60);
-            let obstacle_score = result.obstacle;
+        let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn, feature| {
+            let obstacle_score = std::cmp::min(result.obstacle, 200);
+            // let obstacle_score = result.obstacle;
             let h = result.fire_height as i32;
             let h2 = player.board.max_height() as i32;
-            (obstacle_score * 100000 + (2 * h - h2) * 1000 + (self.rand.next() & 0xFF) as i32)
+                        // let pattern = player.board.calc_pattern();
+                        // let pattern_score = (pattern.0 + pattern.1) as i32 * 10000;
+
+            let feature_score = feature.keima * 50000
+                                + feature.tate * 40000
+                                + feature.keima2 * 10000
+                                + feature.tate2 * 10000
+                                ;
+            // obstacle_score * 5000000 + feature_score + (2 * h - h2) * 256 + (self.rand.next() & 0xFF) as i32
+            obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
             // (obstacle_score * 100000 + (self.rand.next() & 0xFF) as i32)
         });
 
@@ -269,7 +278,7 @@ impl<'a> BestAi<'a> {
 
         if self.replay_player.is_empty() {
             let max_turn = 5;
-            let mut think_time_in_sec = 3;
+            let mut think_time_in_sec = 1;
             let enemy_send_obstacles = vec![0; max_turn];
 
             if self.rest_time_in_milli < 30 * 1000 {
@@ -288,7 +297,7 @@ impl<'a> BestAi<'a> {
                 verbose: false,
             };
 
-            let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn| {
+            let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn, feature| {
                 // result.skill_guage * 10000 + result.chains as i32 * 10 - search_turn as i32
                 player.decrease_skill_guage * 10000 + result.chains as i32 * 10
             });
