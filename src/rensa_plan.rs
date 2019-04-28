@@ -48,6 +48,7 @@ pub struct PlanContext {
     pub packs: Vec<[[u8; 2]; 2]>,
     pub stop_search_if_3_chains: bool,
     pub replay: Vec<action::Action>,
+    pub verbose: bool,
 }
 
 // pub fn calc_rensa_plan(&mut self, cur_turn: usize, max_fire_turn: usize, player: &player::Player, ) {
@@ -64,7 +65,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
     // let mut candidates = Vec::new();
 
     let initial_state = BeamState::new(context.player.clone(), 0, Vec::new());
-    let mut bests = vec![(initial_state.clone(), action::ActionResult::new(0, 0, 0)); context.max_turn];
+    let mut bests = vec![(initial_state.clone(), action::ActionResult::new(0, 0, 0, 0)); context.max_turn];
     heaps[0].push(initial_state);
 
     let mut visited = HashSet::new();
@@ -75,6 +76,10 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
             let turn = context.plan_start_turn + search_turn;
 
             let mut player = b.player.clone();
+            if search_turn < context.enemy_send_obstacles.len() {
+                player.add_obstacles(context.enemy_send_obstacles[search_turn]);
+            }
+            
             let pack = context.packs[turn].clone();
             let a = &context.replay[search_turn];
             let result = player.put(&pack, a);
@@ -121,39 +126,40 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
 
             // eprintln!("come: {} {}", search_turn, heaps[search_turn].len());
             if let Some(mut b) = heaps[search_turn].pop() {
-                b.player.add_obstacles(context.enemy_send_obstacles[search_turn]);
+                if search_turn < context.enemy_send_obstacles.len() {
+                    b.player.add_obstacles(context.enemy_send_obstacles[search_turn]);
+                }
 
                 actions.iter().for_each(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
                         return;
                     }
 
-                    if let action::Action::PutBlock { pos, rot } = a {
-                        if turn == 0 && *pos != W / 2 {
-                            return;
-                        }
-                        let last_action = b.actions.last().map(|a| a.into());
-                        if let Some(action::Action::PutBlock { pos: prev_pos, rot: prev_rot }) = last_action {
-                            let p1 = *pos as i32;
-                            let p2 = prev_pos as i32;
-                            // if p2 < p1 - 2 || p2 > p1 + 2 {
-                            if p2 < p1 - 3 || p2 > p1 + 3 {
+                    if context.plan_start_turn == 0 {
+                        if let action::Action::PutBlock { pos, rot } = a {
+                            if turn == 0 && *pos != W / 2 {
                                 return;
                             }
+                            // let last_action = b.actions.last().map(|a| a.into());
+                            // if let Some(action::Action::PutBlock { pos: prev_pos, rot: prev_rot }) = last_action {
+                            //     let p1 = *pos as i32;
+                            //     let p2 = prev_pos as i32;
+                            //     // if p2 < p1 - 2 || p2 > p1 + 2 {
+                            //     // if p2 < p1 - 3 || p2 > p1 + 3 {
+                            //     if p2 < p1 - 5 || p2 > p1 + 5 {
+                            //         return;
+                            //     }
+                            // }
                         }
                     }
 
                     let mut player = b.player.clone();
                     let result = player.put(&pack, a);
 
-                    if best < result.chains {
+                    if context.verbose && best < result.chains {
                         best = result.chains;
                         let elapsed = timer.elapsed();
                         eprintln!("improve: {} {}.{:03}", best, elapsed.as_secs(), elapsed.subsec_nanos() / 1_000_000);
-                    }
-
-                    if player.board.is_dead() || !visited.insert(player.hash()) {
-                        return;
                     }
 
                     let stop_search = result.chains >= 3;
@@ -166,9 +172,13 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                         bests[search_turn] = (BeamState::new(player.clone(), score, actions.clone()), result);
                     }
 
-                    if context.stop_search_if_3_chains && stop_search {
+                    if player.board.is_dead() || !visited.insert(player.hash()) {
                         return;
                     }
+
+                    // if context.stop_search_if_3_chains && stop_search {
+                    //     return;
+                    // }
 
                     // ここら辺の判断は外に出す
                     // if context.plan_start_turn == 0 && player.board.max_height() >= H - 3 {
@@ -181,9 +191,13 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                             // let result = rensa_eval_board.put(&fall, &fire_action);
                             let result = rensa_eval_board.put_one(v, x as usize);
                             calc_score(&result, &player, search_turn)
+                            // result.obstacle
                         }).max().unwrap()).max().unwrap();
                         // candidates.push(BeamState::new(player.clone(), max_score, actions.clone()));
-                        heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score, actions.clone()));
+
+                        let pattern = player.board.calc_pattern();
+                        let pattern_score = (pattern.0 + pattern.1) as i32 * 10000;
+                        heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score + pattern_score, actions.clone()));
                     }
                 });
 

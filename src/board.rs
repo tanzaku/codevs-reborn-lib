@@ -49,6 +49,10 @@ impl Board {
         ((64 - self.column[x].leading_zeros() + 3) / 4) as usize
     }
 
+    fn height_by_val(v: u64) -> u8 {
+        ((64 - v.leading_zeros() + 3) / 4) as u8
+    }
+
     fn fall(&mut self, x: usize, v: u64) {
         let h = self.height(x);
         if h == 16 { self.dead = true; return; }
@@ -59,7 +63,7 @@ impl Board {
         self.fall(pos, v);
         let changed = 1 << pos;
         let chains = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_chain_result(chains)
+        score_calculator::ScoreCalculator::calc_chain_result(chains.0, chains.1)
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
@@ -75,7 +79,7 @@ impl Board {
 
         // fixed changed
         let chains = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_chain_result(chains)
+        score_calculator::ScoreCalculator::calc_chain_result(chains.0, chains.1)
     }
 
     pub fn use_skill(&mut self) -> action::ActionResult {
@@ -100,7 +104,38 @@ impl Board {
 
         let changed = self.fall_by_mask(&vanished);
         let chains = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, chains)
+        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, chains.0, chains.1)
+    }
+
+    pub fn calc_pattern(&self) -> (u8, u8) {
+        let mut sum_keima = 0;
+        let mut sum_tate = 0;
+        for i in 0..W-1 {
+            let r = Self::calc_remove(self.column[i], self.column[i]<<8);
+            sum_tate += r.count_ones() / 4;
+            
+            let r = Self::calc_remove(self.column[i], self.column[i]<<12);
+            sum_tate += r.count_ones() / 4;
+
+            let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
+            sum_keima += r.count_ones() / 4;
+            
+            let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
+            sum_keima += r.count_ones() / 4;
+            
+            let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
+            sum_keima += r.count_ones() / 4;
+            
+            let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
+            sum_keima += r.count_ones() / 4;
+        }
+        let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
+        sum_tate += r.count_ones() / 4;
+
+        let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
+        sum_tate += r.count_ones() / 4;
+        
+        (sum_keima as u8, sum_tate as u8)
     }
 
     fn calc_five_mask(c: u64) -> u64 {
@@ -159,12 +194,15 @@ impl Board {
         changed
     }
 
-    fn vanish(&mut self, changed: usize) -> u8 {
+    fn vanish(&mut self, changed: usize) -> (u8, u8) {
         let mut rensa = 0;
         let mut changed = changed;
+        let mut height = 0;
+
         loop {
             let c = changed | changed >> 1;
             let mut remove_mask = [0; W];
+
             for i in 0..W-1 {
                 if (c & (1<<i)) == 0 {
                     continue
@@ -191,13 +229,16 @@ impl Board {
             remove_mask[W-1] |= r >> 4;
 
             // eprintln!("{:?}", self);
+            if height == 0 {
+                height = Self::height_by_val(*remove_mask.iter().max().unwrap());
+            }
             changed = self.fall_by_mask(&remove_mask);
             if changed == 0 {
                 break;
             }
             rensa += 1;
         }
-        rensa
+        (rensa, height)
     }
 
     pub fn fall_obstacle(&mut self) {
