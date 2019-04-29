@@ -79,7 +79,7 @@ impl Replay {
         self.get_results().into_iter().map(|r| r.obstacle).collect()
     }
 
-    pub fn rest_turn(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.actions.len()
     }
 }
