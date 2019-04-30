@@ -175,7 +175,7 @@ impl<'a> BestAi<'a> {
 
             let replay = self.replay_player.get_actions();
             let replay = vec![];
-            let best = self.search_best(self.player.clone(), max_turn, think_time_in_sec, enemy_send_obstacles, replay, true);
+            let best = self.search_best2(self.player.clone(), max_turn, think_time_in_sec, enemy_send_obstacles, replay, true);
             if let Some(best) = best {
                 self.replay_player = best;
                 // eprintln!("rensa: {} {} {}", self.cur_turn, s.0.actions.len(), s.1.chains);
@@ -221,68 +221,6 @@ impl<'a> BestAi<'a> {
         }
     }
 
-    fn search_best2(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: u64, enemy_send_obstacles: Vec<i32>, replay: Vec<action::Action>, verbose: bool) -> Option<replay::Replay> {
-        // let mut enemy_send_obstacles = vec![0; max_turn];
-
-        let context = rensa_plan::PlanContext {
-            plan_start_turn: self.cur_turn,
-            max_turn,
-            think_time_in_sec,
-            player: player.clone(),
-            enemy_send_obstacles,
-            packs: self.packs.clone(),
-            stop_search_if_3_chains: true,
-            replay,
-            // verbose,
-            verbose: false,
-        };
-
-        let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn, feature| {
-            let obstacle_score = std::cmp::min(result.obstacle, 200);
-
-            let feature_score = feature.keima * 50000
-                                + feature.tate * 20000
-                                + feature.keima2 * 3000
-                                + feature.tate2 * 1000
-                                ;
-            obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
-        });
-
-        let mut max = -1.0;
-        // let mut max = -1;
-        let mut choosed = None;
-        let mut turn = 0.0;
-        states.into_iter().for_each(|s| {
-            // eprintln!("state: {}", s.1.obstacle);
-            turn += 1.0;
-            // let val = std::cmp::min(80, s.1.obstacle) as f64;
-            let val = std::cmp::min(60, s.1.obstacle) as f64;
-            // let val = std::cmp::min(40, s.1.obstacle) as f64;
-            // let val = s.1.obstacle as f64 / turn;
-            // let val = val as f64 / turn;
-            // let val = s.1.obstacle as f64;
-            if max < val {
-                max = val;
-                choosed = Some(s);
-            }
-        });
-
-        let mut replay = replay::Replay::new();
-        match choosed {
-            None => None,
-            Some(s) => {
-                if s.0.actions.is_empty() {
-                    None
-                } else {
-                    let last_turn = self.cur_turn + s.0.actions.len();
-                    let packs = &self.packs[self.cur_turn..last_turn];
-                    replay.init(&player, packs, &s.0.actions);
-                    Some(replay)
-                }
-            }
-        }
-    }
-
     fn search_best(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: u64, enemy_send_obstacles: Vec<i32>, replay: Vec<action::Action>, verbose: bool) -> Option<replay::Replay> {
         // let mut enemy_send_obstacles = vec![0; max_turn];
 
@@ -309,15 +247,21 @@ impl<'a> BestAi<'a> {
                         // let pattern_score = (pattern.0 + pattern.1) as i32 * 10000;
 
             let feature_score = feature.keima * 50000
-                                // + feature.tate * 40000
                                 + feature.tate * 10000
+                                // + feature.tate * 10000
                                 + feature.keima2 * 1000
-                                // + feature.tate2 * 10000
                                 + feature.tate2 * 300
                                 ;
+            // let feature_score = feature.keima * 20000
+            //                     // + feature.tate * 40000
+            //                     + feature.tate * 10000
+            //                     + feature.keima2 * 2000
+            //                     // + feature.tate2 * 10000
+            //                     + feature.tate2 * 1000
+            //                     ;
             // obstacle_score * 5000000 + feature_score + (2 * h - h2) * 256 + (self.rand.next() & 0xFF) as i32
             obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
-            // obstacle_score * 50000 + feature_score + (self.rand.next() & 0xFF) as i32
+            // obstacle_score * 5000000 + feature_score + (2 * h - h2) * 100000 + (self.rand.next() & 0xFF) as i32
             // (obstacle_score * 100000 + (self.rand.next() & 0xFF) as i32)
         });
 
@@ -344,12 +288,81 @@ impl<'a> BestAi<'a> {
         match choosed {
             None => None,
             Some(s) => {
-                if s.0.actions.is_empty() {
+                let actions = s.0.get_actions();
+
+                // eprintln!("come: {}", actions.len());
+                if actions.is_empty() {
                     None
                 } else {
-                    let last_turn = self.cur_turn + s.0.actions.len();
+                    let last_turn = self.cur_turn + actions.len();
                     let packs = &self.packs[self.cur_turn..last_turn];
-                    replay.init(&player, packs, &s.0.actions);
+                    replay.init(&player, packs, &actions);
+                    Some(replay)
+                }
+            }
+        }
+    }
+
+    fn search_best2(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: u64, enemy_send_obstacles: Vec<i32>, replay: Vec<action::Action>, verbose: bool) -> Option<replay::Replay> {
+        // let mut enemy_send_obstacles = vec![0; max_turn];
+
+        let weights = [
+                        // (50000,10000,1000,300),
+                        (50000,40000,1000,1000),
+                        // (50000,60000,10000,10000),
+                        // (50000,50000,10000,10000),
+                    ];
+        let context = rensa_plan::PlanContext {
+            plan_start_turn: self.cur_turn,
+            max_turn,
+            think_time_in_sec: think_time_in_sec / weights.len() as u64,
+            player: player.clone(),
+            enemy_send_obstacles,
+            packs: self.packs.clone(),
+            stop_search_if_3_chains: true,
+            replay,
+            // verbose,
+            verbose: false,
+        };
+
+        let states = weights.iter().map(|w| {
+            rensa_plan::calc_rensa_plan(&context, |result, player, search_turn, feature| {
+                let obstacle_score = std::cmp::min(result.obstacle, 200);
+                let feature_score = feature.keima * w.0
+                                    + feature.tate * w.1
+                                    + feature.keima2 * w.2
+                                    + feature.tate2 * w.3
+                                    ;
+                obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
+            })
+        }).collect::<Vec<_>>();
+
+        let mut max = -1;
+        // let mut max = -1;
+        let mut choosed = None;
+        for i in 0..states.len() {
+            for j in 0..context.max_turn {
+                let val = std::cmp::min(60, states[i][j].1.obstacle);
+                if max < val {
+                    max = val;
+                    choosed = Some(&states[i][j]);
+                }
+            }
+        }
+
+        let mut replay = replay::Replay::new();
+        match choosed {
+            None => None,
+            Some(s) => {
+                let actions = s.0.get_actions();
+
+                // eprintln!("come: {}", actions.len());
+                if actions.is_empty() {
+                    None
+                } else {
+                    let last_turn = self.cur_turn + actions.len();
+                    let packs = &self.packs[self.cur_turn..last_turn];
+                    replay.init(&player, packs, &actions);
                     Some(replay)
                 }
             }
@@ -394,9 +407,10 @@ impl<'a> BestAi<'a> {
             });
 
             let best = states.into_iter().max_by_key(|s| s.0.player.decrease_skill_guage).unwrap();
-            let last_turn = self.cur_turn + best.0.actions.len();
+            let actions = best.0.get_actions();
+            let last_turn = self.cur_turn + actions.len();
             let packs = &self.packs[self.cur_turn..last_turn];
-            self.replay_player.init(&self.player, packs, &best.0.actions);
+            self.replay_player.init(&self.player, packs, &actions);
             // eprintln!("kill_bommer: {} {} {}", self.cur_turn, best.0.actions.len(), best.0.player.decrease_skill_guage);
         }
 

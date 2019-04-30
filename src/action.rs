@@ -33,6 +33,7 @@ impl Action {
 
 impl From<u8> for Action {
     fn from(item: u8) -> Self {
+        let item = item - 1;
         if item == 9 * 4 {
             Action::UseSkill
         } else if item < 9 * 4 {
@@ -54,8 +55,17 @@ impl From<&u8> for Action {
 impl From<&Action> for u8 {
     fn from(item: &Action) -> Self {
         match item {
-            Action::PutBlock { pos, rot } => (pos*4+rot) as u8,
-            Action::UseSkill => 9*4,
+            Action::PutBlock { pos, rot } => (pos*4+rot+1) as u8,
+            Action::UseSkill => 9*4+1,
+        }
+    }
+}
+
+impl From<&Action> for u128 {
+    fn from(item: &Action) -> Self {
+        match item {
+            Action::PutBlock { pos, rot } => (pos*4+rot+1) as u128,
+            Action::UseSkill => 9*4+1,
         }
     }
 }

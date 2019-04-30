@@ -212,7 +212,7 @@ impl Board {
         let mut rensa = 0;
         let mut changed = changed;
         let mut height = 0;
-        // let mut remove_hash = 0;
+        let mut remove_hash = 0;
 
         loop {
             let c = changed | changed >> 1;
@@ -239,12 +239,12 @@ impl Board {
                 remove_mask[i+0] |= r;
                 remove_mask[i+1] |= r << 4;
 
-                // remove_hash = remove_hash * 31 + remove_mask[i+0];
+                remove_hash = remove_hash * 31 + remove_mask[i+0];
             }
             let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<4);
             remove_mask[W-1] |= r;
             remove_mask[W-1] |= r >> 4;
-            // remove_hash = remove_hash * 31 + remove_mask[W-1];
+            remove_hash = remove_hash * 31 + remove_mask[W-1];
 
             // eprintln!("{:?}", self);
             if height == 0 {
@@ -256,8 +256,8 @@ impl Board {
             }
             rensa += 1;
         }
-        // (rensa, height, remove_hash)
-        (rensa, height, 0)
+        (rensa, height, remove_hash)
+        // (rensa, height, 0)
     }
 
     pub fn fall_obstacle(&mut self) {
