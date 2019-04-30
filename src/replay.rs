@@ -15,6 +15,7 @@ pub struct Replay {
     expected_results: VecDeque<action::ActionResult>,
     packs: VecDeque<[[u8; 2]; 2]>,
     actions: VecDeque<u8>,
+    enemy_obstacles: VecDeque<u16>,
 }
 
 impl Replay {
@@ -23,6 +24,7 @@ impl Replay {
             expected_results: VecDeque::new(),
             packs: VecDeque::new(),
             actions: VecDeque::new(),
+            enemy_obstacles: VecDeque::new(),
         }
     }
 
@@ -48,6 +50,7 @@ impl Replay {
         !illegal_action && &result == self.expected_results.back().unwrap()
     }
 
+    // pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], actions: &[u8], enemy_obstacles: &[u16]) {
     pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], actions: &[u8]) {
         self.packs = packs.to_vec().into();
         self.actions = actions.to_vec().into();

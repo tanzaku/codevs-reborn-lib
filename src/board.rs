@@ -69,8 +69,8 @@ impl Board {
     pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
         self.fall(pos, v);
         let changed = 1 << pos;
-        let chains = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_chain_result(chains.0, chains.1)
+        let vanish_result = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, vanish_result.2)
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
@@ -85,8 +85,8 @@ impl Board {
         });
 
         // fixed changed
-        let chains = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_chain_result(chains.0, chains.1)
+        let vanish_result = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, vanish_result.2)
     }
 
     pub fn use_skill(&mut self) -> action::ActionResult {
@@ -110,8 +110,8 @@ impl Board {
         });
 
         let changed = self.fall_by_mask(&vanished);
-        let chains = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, chains.0, chains.1)
+        let vanish_result = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, vanish_result.0, vanish_result.1, vanish_result.2)
     }
 
     pub fn calc_feature(&self) -> Feature {
@@ -208,10 +208,11 @@ impl Board {
         changed
     }
 
-    fn vanish(&mut self, changed: usize) -> (u8, u8) {
+    fn vanish(&mut self, changed: usize) -> (u8, u8, u64) {
         let mut rensa = 0;
         let mut changed = changed;
         let mut height = 0;
+        // let mut remove_hash = 0;
 
         loop {
             let c = changed | changed >> 1;
@@ -237,10 +238,13 @@ impl Board {
                 let r = Self::calc_remove(self.column[i], self.column[i+1]>>4);
                 remove_mask[i+0] |= r;
                 remove_mask[i+1] |= r << 4;
+
+                // remove_hash = remove_hash * 31 + remove_mask[i+0];
             }
             let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<4);
             remove_mask[W-1] |= r;
             remove_mask[W-1] |= r >> 4;
+            // remove_hash = remove_hash * 31 + remove_mask[W-1];
 
             // eprintln!("{:?}", self);
             if height == 0 {
@@ -252,7 +256,8 @@ impl Board {
             }
             rensa += 1;
         }
-        (rensa, height)
+        // (rensa, height, remove_hash)
+        (rensa, height, 0)
     }
 
     pub fn fall_obstacle(&mut self) {

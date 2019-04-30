@@ -15,6 +15,7 @@ pub struct ActionResult {
     pub obstacle: i32,
     pub skill_guage: i32,
     pub fire_height: u8,
+    pub remove_hash: u64,
 }
 
 impl Action {
@@ -70,7 +71,7 @@ impl std::fmt::Display for Action {
 
 
 impl ActionResult {
-    pub fn new(chains: u8, obstacle: i32, skill_guage: i32, fire_height: u8) -> Self {
-        Self { chains, obstacle, skill_guage, fire_height, }
+    pub fn new(chains: u8, obstacle: i32, skill_guage: i32, fire_height: u8, remove_hash: u64) -> Self {
+        Self { chains, obstacle, skill_guage, fire_height, remove_hash, }
     }
 }
