@@ -3,6 +3,7 @@ use super::action;
 use super::board;
 use super::player;
 // use super::rand;
+use super::rand;
 
 use std::collections::VecDeque;
 use std::collections::BinaryHeap;
@@ -74,7 +75,7 @@ pub struct PlanContext {
 }
 
 // pub fn calc_rensa_plan(&mut self, cur_turn: usize, max_fire_turn: usize, player: &player::Player, ) {
-pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(BeamState, action::ActionResult)>
+pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, calc_score: F) -> Vec<(BeamState, action::ActionResult)>
     where F: Fn(&action::ActionResult, &player::Player, usize, &board::Feature) -> i32 + Sync + Send
 {
     assert!(context.max_turn <= 16);
@@ -135,7 +136,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                 //     // result.obstacle
                 // })).max_by_key(|x| x.0).unwrap();
                                 // candidates.push(BeamState::new(player.clone(), max_score, actions.clone()));
-                heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score.0, max_score.1.remove_hash, actions));
+                heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score.0 + (rand.next() & 0xFF) as i32, max_score.1.remove_hash, actions));
             }
         }
     }
@@ -221,10 +222,10 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                         return;
                     }
                     if bests[search_turn].0.score < score {
-                        bests[search_turn] = (BeamState::new(player.clone(), score, 0, actions), result);
+                        bests[search_turn] = (BeamState::new(player.clone(), score + (rand.next() & 0xFF) as i32, 0, actions), result);
                     }
                     if search_turn + 1 < context.max_turn {
-                        heaps[search_turn + 1].push(BeamState::new(player, max_score.0, max_score.1, actions));
+                        heaps[search_turn + 1].push(BeamState::new(player, max_score.0 + (rand.next() & 0xFF) as i32, max_score.1, actions));
                     }
                 });
                     // if player.board.is_dead() || !visited.insert(player.hash()) {

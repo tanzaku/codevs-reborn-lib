@@ -192,7 +192,7 @@ impl<'a> BestAi<'a> {
         };
 
         let states = weights.iter().map(|w| {
-            rensa_plan::calc_rensa_plan(&context, |result, player, search_turn, feature| {
+            rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, search_turn, feature| {
                 let obstacle_score = std::cmp::min(result.obstacle, 200);
                 let feature_score = feature.keima * w.0
                                     + feature.tate * w.1
@@ -296,7 +296,7 @@ impl<'a> BestAi<'a> {
                 replay: vec![],
             };
 
-            let states = rensa_plan::calc_rensa_plan(&context, |result, player, search_turn, feature| {
+            let states = rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, search_turn, feature| {
                 // result.skill_guage * 10000 + result.chains as i32 * 10 - search_turn as i32
                 player.decrease_skill_guage * 10000 + result.chains as i32 * 10
             });
