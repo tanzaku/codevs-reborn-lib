@@ -274,6 +274,10 @@ impl Board {
         (0..W).map(|x| self.height(x)).max().unwrap()
     }
 
+    pub fn num_obstacle(&self) -> u64 {
+        self.column.iter().map(|c| Self::calc_obstacle_mask(*c)).sum::<u64>() / 4
+    }
+
     pub fn hash(&self) -> u64 {
         let mut h = 0;
         self.column.iter().for_each(|c| h += h * 31 + c);

@@ -12,3 +12,5 @@ pub mod player;
 pub mod types;
 pub mod consts;
 pub mod replay;
+
+extern crate rayon;

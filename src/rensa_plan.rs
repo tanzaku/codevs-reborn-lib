@@ -14,6 +14,8 @@ use super::consts::{W,H};
 use std::collections::HashSet;
 use std::collections::HashMap;
 
+use rayon::prelude::*;
+
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct BeamState {
@@ -141,7 +143,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
 
     let mut remove_hashes: Vec<HashMap<u64, u8>> = vec![HashMap::new(); context.max_turn];
     let mut iter = 0;
-    let mut best = 0;
+    let mut result = vec![None; actions.len()];
     loop {
         let elapsed = timer.elapsed();
         if elapsed.as_secs() >= context.think_time_in_sec {
@@ -172,15 +174,15 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                     remove_hashes[search_turn].insert(b.remove_hash, h + 1);
                 }
 
-                actions.iter().for_each(|a| {
+                actions.par_iter().map(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
-                        return;
+                        return None;
                     }
 
                     if context.plan_start_turn == 0 {
                         if let action::Action::PutBlock { pos, rot } = a {
                             if turn == 0 && *pos != W / 2 {
-                                return;
+                                return None;
                             }
                             // let last_action = b.actions.last().map(|a| a.into());
                             // if let Some(action::Action::PutBlock { pos: prev_pos, rot: prev_rot }) = last_action {
@@ -198,11 +200,11 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                     let mut player = b.player.clone();
                     let result = player.put(&pack, a);
 
-                    if context.verbose && best < result.chains {
-                        best = result.chains;
-                        let elapsed = timer.elapsed();
-                        eprintln!("improve: {} {}.{:03}", best, elapsed.as_secs(), elapsed.subsec_nanos() / 1_000_000);
-                    }
+                    // if context.verbose && best < result.chains {
+                    //     best = result.chains;
+                    //     let elapsed = timer.elapsed();
+                    //     eprintln!("improve: {} {}.{:03}", best, elapsed.as_secs(), elapsed.subsec_nanos() / 1_000_000);
+                    // }
 
                     let stop_search = result.chains >= 3;
 
@@ -215,7 +217,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                     }
 
                     if player.board.is_dead() || !visited.insert(player.hash()) {
-                        return;
+                        return None;
                     }
 
                     // if context.stop_search_if_3_chains && stop_search {
@@ -227,28 +229,34 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
                     //     return;
                     // }
 
-                    if search_turn + 1 < context.max_turn {
-                        let max_score = (0..W).map(|x| (1..=9).map(|v| {
-                            let mut rensa_eval_board = player.clone();
-                            // let result = rensa_eval_board.put(&fall, &fire_action);
-                            let result = rensa_eval_board.put_one(v, x as usize);
-                            // (calc_score(&result, &player, search_turn, &feature), result)
-                            (calc_score(&result, &player, search_turn, &feature), result)
-                        }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap();
-                        
-                        // let max_score = (0..W).flat_map(|x| (1..=9).map(|v| {
-                        //     let mut rensa_eval_board = player.clone();
-                        //     // let result = rensa_eval_board.put(&fall, &fire_action);
-                        //     let result = rensa_eval_board.put_one(v, x as usize);
-                        //     (calc_score(&result, &player, search_turn, &feature), result)
-                        //     // result.obstacle
-                        // })).max_by_key(|x| x.0).unwrap();
-                        // candidates.push(BeamState::new(player.clone(), max_score, actions.clone()));
-
-                        heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score.0, max_score.1.remove_hash, actions));
+                    if search_turn + 1 >= context.max_turn {
+                        return None;
                     }
-                });
 
+                    let max_score = (0..W).map(|x| (1..=9).map(|v| {
+                        let mut rensa_eval_board = player.clone();
+                        // let result = rensa_eval_board.put(&fall, &fire_action);
+                        let result = rensa_eval_board.put_one(v, x as usize);
+                        // (calc_score(&result, &player, search_turn, &feature), result)
+                        (calc_score(&result, &player, search_turn, &feature), result)
+                    }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap();
+                    
+                    // let max_score = (0..W).flat_map(|x| (1..=9).map(|v| {
+                    //     let mut rensa_eval_board = player.clone();
+                    //     // let result = rensa_eval_board.put(&fall, &fire_action);
+                    //     let result = rensa_eval_board.put_one(v, x as usize);
+                    //     (calc_score(&result, &player, search_turn, &feature), result)
+                    //     // result.obstacle
+                    // })).max_by_key(|x| x.0).unwrap();
+                    // candidates.push(BeamState::new(player.clone(), max_score, actions.clone()));
+
+                    // heaps[search_turn + 1].push(BeamState::new(player.clone(), max_score.0, max_score.1.remove_hash, actions));
+                    Some(BeamState::new(player.clone(), max_score.0, max_score.1.remove_hash, actions))
+                }).collect();
+
+                result.iter().filter(|x| x.is_some()).for_each(|x| {
+                    heaps[search_turn + 1].push(x.unwrap());
+                });
                 // candidates.sort();
                 // candidates.iter().rev().take(5).for_each(|b| {
                 //    heaps[search_turn + 1].push(b.clone());
@@ -262,7 +270,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
         }
     }
 
-    eprintln!("iter={}", iter);
+    // eprintln!("iter={}", iter);
     // let elapsed = timer.elapsed();
     // let elapsed = format!("{}.{:03}", elapsed.as_secs(), elapsed.subsec_nanos() / 1_000_000);
     // eprintln!("best: {} {} {}[s]", context.plan_start_turn, best.score, elapsed);
