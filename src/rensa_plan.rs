@@ -166,7 +166,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
 
                 if b.remove_hash != 0 {
                     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
-                    if h >= 15 {
+                    if h >= 5 {
                         // eprintln!("branch cut: {}", b.remove_hash);
                         return;
                     }
@@ -195,9 +195,6 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
 
                     let feature = player.board.calc_feature();
                     let score = calc_score(&result, &player, search_turn, &feature);
-                    // if bests[search_turn].0.score < score {
-                    //     bests[search_turn] = (BeamState::new(player.clone(), score, 0, actions), result);
-                    // }
 
                     // if context.stop_search_if_3_chains && stop_search {
                     //     return;
@@ -247,9 +244,6 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, mut calc_score: F) -> Vec<(Beam
     }
 
     eprintln!("iter={}", iter);
-    // let elapsed = timer.elapsed();
-    // let elapsed = format!("{}.{:03}", elapsed.as_secs(), elapsed.subsec_nanos() / 1_000_000);
-    // eprintln!("best: {} {} {}[s]", context.plan_start_turn, best.score, elapsed);
     bests
 }
 
