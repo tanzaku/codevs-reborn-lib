@@ -266,7 +266,8 @@ impl<'a> BestAi<'a> {
             //                     + feature.tate2 * 1000
             //                     ;
             // obstacle_score * 5000000 + feature_score + (2 * h - h2) * 256 + (self.rand.next() & 0xFF) as i32
-            obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
+            // obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
+            obstacle_score * 5000000 + feature_score
             // obstacle_score * 5000000 + feature_score + (2 * h - h2) * 100000 + (self.rand.next() & 0xFF) as i32
             // (obstacle_score * 100000 + (self.rand.next() & 0xFF) as i32)
         });
@@ -344,7 +345,8 @@ impl<'a> BestAi<'a> {
                                     + feature.keima2 * w.2
                                     + feature.tate2 * w.3
                                     ;
-                obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
+                // obstacle_score * 5000000 + feature_score + (self.rand.next() & 0xFF) as i32
+                obstacle_score * 5000000 + feature_score
             })
         }).collect::<Vec<_>>();
 

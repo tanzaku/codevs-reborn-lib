@@ -9,7 +9,7 @@ pub enum Action {
     UseSkill,
 }
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Default)]
 pub struct ActionResult {
     pub chains: u8,
     pub obstacle: i32,
