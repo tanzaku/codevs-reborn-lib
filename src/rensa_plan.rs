@@ -71,7 +71,6 @@ pub struct PlanContext {
     pub packs: Vec<[[u8; 2]; 2]>,
     pub stop_search_if_3_chains: bool,
     pub replay: Vec<action::Action>,
-    pub verbose: bool,
 }
 
 // pub fn calc_rensa_plan(&mut self, cur_turn: usize, max_fire_turn: usize, player: &player::Player, ) {
