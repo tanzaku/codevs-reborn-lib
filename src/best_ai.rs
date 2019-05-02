@@ -306,10 +306,10 @@ impl<'a> BestAi<'a> {
         if fire.1 < 10 {
             return None;
         }
-        eprintln!("fire?: {} {}", self.cur_turn, fire.1);
 
         let mut enemy = self.enemy.clone();
         let cur_enemy = self.search_max_obstacles(&enemy, 1000, vec![]);
+        eprintln!("fire?: {} {} {}", self.cur_turn, fire.1, cur_enemy);
         if cur_enemy <= 30 {
             return None;
         }
