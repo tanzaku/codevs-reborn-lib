@@ -185,7 +185,7 @@ impl<'a> BestAi<'a> {
                 // let max_turn = if self.cur_turn <= 10 { 15 } else { 15 };
                 // let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
                 // let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
-                let mut think_time_in_milli = 5000 * 2;
+                let mut think_time_in_milli = 5000 * 3;
                 // let limit = if self.cur_turn <= 10 { 60 } else { 30 };
                 let limit = 60;
                 // let mut think_time_in_milli = 5000;
