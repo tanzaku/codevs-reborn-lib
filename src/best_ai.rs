@@ -376,8 +376,6 @@ impl<'a> BestAi<'a> {
             let a2 = replay_enemy.replay().unwrap();
             let r1 = player.put(&self.packs[turn], &a1);
             let r2 = enemy.put(&self.packs[turn], &a2);
-            player.obstacle -= r1.obstacle;
-            enemy.obstacle -= r2.obstacle;
             let min = std::cmp::min(player.obstacle, enemy.obstacle);
             player.obstacle -= min;
             enemy.obstacle -= min;
@@ -401,7 +399,12 @@ impl<'a> BestAi<'a> {
         //     return o1 - o2;
         // }
         // r1.len() as i32 - r2.len() as i32
-        player.obstacle + o2 - (enemy.obstacle + o1)
+        let score = player.obstacle + o2 - (enemy.obstacle + o1);
+        // let score = o2 - o1;
+        if score < 0 {
+            eprintln!("improve: {} {} {} {} {:?} {:?}", player.obstacle, o1, enemy.obstacle, o2, r1.get_obstacles(), r2.get_obstacles());
+        }
+        score
     }
 
     // ボマーかカウンター狙いの場合、延長して大連鎖狙う
