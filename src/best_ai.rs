@@ -142,20 +142,28 @@ impl<'a> BestAi<'a> {
             return None;
         }
 
+        if self.replay_player.len() > 1 {
+            let fire_timing = self.fire_timing();
+            if fire_timing.is_some() {
+                self.replay_player.clear();
+                return fire_timing;
+            }
+        }
+
         if !self.replay_player.can_replay(&self.player) {
             let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
             let max_turn = if self.cur_turn <= 10 { 13 } else { 11 };
-            let mut think_time_in_sec = if self.cur_turn <= 10 { 18 } else { 15 };
+            let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
             let mut enemy_send_obstacles = vec![0; max_turn];
 
             // emergency
             if self.rest_time_in_milli < 30 * 1000 {
-                think_time_in_sec = 1;
+                think_time_in_milli = 1000;
             }
 
             let replay = self.replay_player.get_actions();
             let replay = vec![];
-            let states = self.search(self.player.clone(), max_turn, think_time_in_sec, enemy_send_obstacles, replay);
+            let states = self.search(self.player.clone(), max_turn, think_time_in_milli, enemy_send_obstacles, replay);
             let best = self.get_best(self.player.clone(), states);
             if let Some(best) = best {
                 self.replay_player = best;
@@ -174,7 +182,7 @@ impl<'a> BestAi<'a> {
         self.replay_player.replay()
     }
 
-    fn search(&mut self, player: player::Player, max_turn: usize, think_time_in_sec: u64, enemy_send_obstacles: Vec<i32>, replay: Vec<action::Action>) -> Vec<Vec<(rensa_plan::BeamState, action::ActionResult)>> {
+    fn search(&mut self, player: player::Player, max_turn: usize, think_time_in_milli: u64, enemy_send_obstacles: Vec<i32>, replay: Vec<action::Action>) -> Vec<Vec<(rensa_plan::BeamState, action::ActionResult)>> {
         // let mut enemy_send_obstacles = vec![0; max_turn];
 
         let weights = [
@@ -187,12 +195,45 @@ impl<'a> BestAi<'a> {
         let context = rensa_plan::PlanContext {
             plan_start_turn: self.cur_turn,
             max_turn,
-            think_time_in_sec: think_time_in_sec / weights.len() as u64,
+            think_time_in_milli: think_time_in_milli / weights.len() as u64,
             player,
             enemy_send_obstacles,
             packs: self.packs.clone(),
             stop_search_if_3_chains: true,
             replay,
+            verbose: true,
+        };
+
+        weights.iter().map(|w| {
+            rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, search_turn, feature| {
+                let obstacle_score = std::cmp::min(result.obstacle, 200);
+                let feature_score = feature.keima * w.0
+                                    + feature.tate * w.1
+                                    + feature.keima2 * w.2
+                                    + feature.tate2 * w.3
+                                    ;
+                obstacle_score * 5000000 + feature_score
+            })
+        }).collect()
+    }
+
+    fn search2(&mut self, player: player::Player, max_turn: usize, think_time_in_milli: u64, enemy_send_obstacles: Vec<i32>, replay: Vec<action::Action>) -> Vec<Vec<(rensa_plan::BeamState, action::ActionResult)>> {
+        // let mut enemy_send_obstacles = vec![0; max_turn];
+
+        let weights = [
+                        (50000,40000,1000,1000),
+                    ];
+
+        let context = rensa_plan::PlanContext {
+            plan_start_turn: self.cur_turn,
+            max_turn,
+            think_time_in_milli: think_time_in_milli / weights.len() as u64,
+            player,
+            enemy_send_obstacles,
+            packs: self.packs.clone(),
+            stop_search_if_3_chains: true,
+            replay,
+            verbose: false,
         };
 
         weights.iter().map(|w| {
@@ -241,41 +282,48 @@ impl<'a> BestAi<'a> {
         }
     }
 
-    // fn fire(&mut self, player: &player::Player) -> i32 {
-    //     let actions = action::Action::all_actions();
-    //     actions.par_iter().map(|a| {
-    //         if &action::Action::UseSkill == a && !b.player.can_use_skill() {
-    //             return std::i32::MIN;
-    //         }
+    fn fire(&mut self, player: &player::Player) -> (action::Action, i32) {
+        let actions = action::Action::all_actions();
+        let pack = self.packs[self.cur_turn];
+        actions.par_iter().map(|a| {
+            if &action::Action::UseSkill == a && !player.can_use_skill() {
+                return (action::Action::UseSkill, 0);
+            }
 
-    //         let mut player = player.clone();
-    //         player.put(&pack, a).obstacle
-    //     }).max().unwrap()
-    // }
+            let mut player = player.clone();
+            (a.clone(), player.put(&pack, a).obstacle)
+        }).max_by_key(|x| x.1).unwrap()
+    }
 
-    // fn search_obstacles(&mut self, player: &player::Player, fall_obstacles: Vev<i32>) -> Vec<i32> {
-    //     self.search(player.clone(), 8, 5, fall_obstacles, vec![]).into_iter().map(|x| x.1.obstacle).collect()
-    // }
+    fn search_max_obstacles(&mut self, player: &player::Player, think_time_in_milli: u64, fall_obstacles: Vec<i32>) -> i32 {
+        self.search2(player.clone(), 10, think_time_in_milli, fall_obstacles, vec![]).into_iter().map(|x| x.iter().map(|x| x.1.obstacle).max().unwrap()).max().unwrap()
+    }
 
-    // fn fire_timing(&mut self) {
-    //     let player = self.player.clone();
-    //     let enemy_fall_obstacles = self.fire(&player);
-    //     if enemy_fall_obstacles == 0 {
-    //         return;
-    //     }
+    // 発火して潰せるなら潰す
+    fn fire_timing(&mut self) -> Option<action::Action> {
+        let player = self.player.clone();
+        let fire = self.fire(&player);
+        if fire.1 < 10 {
+            return None;
+        }
+        eprintln!("fire?: {} {}", self.cur_turn, fire.1);
 
-    //     let mut enemy = self.enemy.clone();
-    //     let cur_enemy = self.search_obstacles(&enemy, vec![]);
-    //     if cur_enemy.max_obstacles() == 0 {
-    //         return;
-    //     }
+        let mut enemy = self.enemy.clone();
+        let cur_enemy = self.search_max_obstacles(&enemy, 1000, vec![]);
+        if cur_enemy <= 30 {
+            return None;
+        }
 
-    //     let enemy_fired = self.search_obstacles(&enemy, enemy_fall_obstacles);
-    //     if enemy_fired.max_obstacles() < cur_enemy.max_obstacles() {
-    //         return self.fire_action();
-    //     }
-    // }
+        let enemy_fired = self.search_max_obstacles(&enemy, 3000, vec![fire.1]);
+        if enemy_fired / 10 < cur_enemy / 10 && enemy_fired <= fire.1 {
+            eprintln!("fire!: {} {}", cur_enemy, enemy_fired);
+            Some(fire.0)
+        } else {
+            None
+        }
+    }
 
+    // ボマーかカウンター狙いの場合、延長して大連鎖狙う
     // fn extend(&mut self) {
     //     if self.is_enemy_bommer() {
     //         if self.enemy_bommer() {
@@ -301,22 +349,23 @@ impl<'a> BestAi<'a> {
 
         if self.replay_player.is_empty() {
             let max_turn = 5;
-            let mut think_time_in_sec = 1;
+            let mut think_time_in_milli = 1000;
             let enemy_send_obstacles = vec![0; max_turn];
 
             if self.rest_time_in_milli < 30 * 1000 {
-                think_time_in_sec = 1;
+                think_time_in_milli = 1000;
             }
 
             let context = rensa_plan::PlanContext {
                 plan_start_turn: self.cur_turn,
                 max_turn: max_turn,
-                think_time_in_sec,
+                think_time_in_milli,
                 player: self.player.clone(),
                 enemy_send_obstacles,
                 packs: self.packs.clone(),
                 stop_search_if_3_chains: false,
                 replay: vec![],
+                verbose: true,
             };
 
             let states = rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, search_turn, feature| {
@@ -349,7 +398,7 @@ impl<'a> BestAi<'a> {
         // let context = skill_plan::PlanContext {
         //     plan_start_turn: self.cur_turn,
         //     max_turn: max_turn,
-        //     think_time_in_sec: 1,
+        //     think_time_in_milli: 1,
         //     player: self.player.clone(),
         //     enemy_send_obstacles: vec![0; max_turn],
         // };

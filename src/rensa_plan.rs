@@ -66,12 +66,13 @@ impl PartialOrd for BeamState {
 pub struct PlanContext {
     pub plan_start_turn: usize,
     pub max_turn: usize,
-    pub think_time_in_sec: u64,
+    pub think_time_in_milli: u64,
     pub player: player::Player,
     pub enemy_send_obstacles: Vec<i32>,
     pub packs: Vec<[[u8; 2]; 2]>,
     pub stop_search_if_3_chains: bool,
     pub replay: Vec<action::Action>,
+    pub verbose: bool,
 }
 
 // pub fn calc_rensa_plan(&mut self, cur_turn: usize, max_fire_turn: usize, player: &player::Player, ) {
@@ -100,8 +101,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
             let turn = context.plan_start_turn + search_turn;
 
             let mut player = b.player.clone();
-            if search_turn < context.enemy_send_obstacles.len() {
-                player.add_obstacles(context.enemy_send_obstacles[search_turn]);
+            if search_turn > 0 && search_turn - 1 < context.enemy_send_obstacles.len() {
+                player.add_obstacles(context.enemy_send_obstacles[search_turn - 1]);
             }
             
             let pack = context.packs[turn].clone();
@@ -145,7 +146,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     let mut iter = 0;
     loop {
         let elapsed = timer.elapsed();
-        if elapsed.as_secs() >= context.think_time_in_sec {
+        let milli = elapsed.as_secs() * 1000 + (elapsed.subsec_nanos() / 1000_000) as u64;
+        if milli >= context.think_time_in_milli {
             break;
         }
 
@@ -160,8 +162,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
 
             // eprintln!("come: {} {}", search_turn, heaps[search_turn].len());
             if let Some(mut b) = heaps[search_turn].pop() {
-                if search_turn < context.enemy_send_obstacles.len() {
-                    b.player.add_obstacles(context.enemy_send_obstacles[search_turn]);
+                if search_turn > 0 && search_turn - 1 < context.enemy_send_obstacles.len() {
+                    b.player.add_obstacles(context.enemy_send_obstacles[search_turn - 1]);
                 }
 
                 if b.remove_hash != 0 {
@@ -243,7 +245,9 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
         }
     }
 
-    eprintln!("iter={}", iter);
+    if context.verbose {
+        eprintln!("iter={}", iter);
+    }
     bests
 }
 
