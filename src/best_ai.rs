@@ -402,7 +402,7 @@ impl<'a> BestAi<'a> {
         // r1.len() as i32 - r2.len() as i32
         // let score = player.obstacle + o2 - (enemy.obstacle + o1);
         let score = o2 - o1;
-            eprintln!("improve: {} {} {} {} {:?} {:?}", player.obstacle, o1, enemy.obstacle, o2, r1.get_obstacles(), r2.get_obstacles());
+        // eprintln!("improve: {} {} {} {} {:?} {:?}", player.obstacle, o1, enemy.obstacle, o2, r1.get_obstacles(), r2.get_obstacles());
         score
     }
 
