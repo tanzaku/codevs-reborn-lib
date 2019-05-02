@@ -151,10 +151,11 @@ impl<'a> BestAi<'a> {
         // }
 
         if !self.replay_player.can_replay(&self.player) {
-            // let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
+            let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
             // let max_turn = if self.cur_turn <= 10 { 15 } else { 15 };
-            let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
+            // let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
             let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
+            // let mut think_time_in_milli = 5000;
             let mut enemy_send_obstacles = vec![0; max_turn];
 
             // emergency
@@ -189,9 +190,8 @@ impl<'a> BestAi<'a> {
 
         let weights = [
                         (50000,10000,1000,300),
-                        (50000,40000,1000,1000),
-                        (50000,60000,10000,10000),
-                        // (50000,50000,10000,10000),
+                        // (50000,40000,1000,1000),
+                        // (50000,60000,10000,10000),
                     ];
 
         let context = rensa_plan::PlanContext {
@@ -207,14 +207,14 @@ impl<'a> BestAi<'a> {
         };
 
         weights.iter().map(|w| {
-            rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, search_turn, feature| {
+            rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, second_chains, player, feature| {
                 let obstacle_score = std::cmp::min(result.obstacle, 200);
                 let feature_score = feature.keima * w.0
                                     + feature.tate * w.1
                                     + feature.keima2 * w.2
                                     + feature.tate2 * w.3
                                     ;
-                obstacle_score * 5000000 + feature_score
+                obstacle_score as i64 * 50000000000 + second_chains as i64 * 500000000 + feature_score as i64
             })
         }).collect()
     }
@@ -239,14 +239,15 @@ impl<'a> BestAi<'a> {
         };
 
         weights.iter().map(|w| {
-            rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, search_turn, feature| {
+            rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, second_chains, player, feature| {
                 let obstacle_score = std::cmp::min(result.obstacle, 200);
                 let feature_score = feature.keima * w.0
                                     + feature.tate * w.1
                                     + feature.keima2 * w.2
                                     + feature.tate2 * w.3
                                     ;
-                obstacle_score * 5000000 + feature_score
+                obstacle_score as i64 * 50000000000 + second_chains as i64 * 500000000 + feature_score as i64
+                // obstacle_score as i64 * 5000000 + feature_score as i64
             })
         }).collect()
     }
@@ -395,9 +396,9 @@ impl<'a> BestAi<'a> {
                 verbose: true,
             };
 
-            let states = rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, search_turn, feature| {
+            let states = rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, second_chains, player, feature| {
                 // result.skill_guage * 10000 + result.chains as i32 * 10 - search_turn as i32
-                player.decrease_skill_guage * 10000 + result.chains as i32 * 10
+                (player.decrease_skill_guage as i64 * 10000 + second_chains as i64 + result.chains as i64 * 10) * 256
             });
 
             let best = states.into_iter().max_by_key(|s| s.0.player.decrease_skill_guage).unwrap();
