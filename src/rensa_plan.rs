@@ -93,15 +93,6 @@ fn eval<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) ->
     let mut player_put = player.clone();
     player_put.put_one(best.3, best.2);
 
-    // let max_score = (0..W).flat_map(|x| (1..=9).map(|v| {
-    // })).max_by_key(|x| x.0).unwrap();
-
-    // (0..W).flat_map(|x| (1..=9).map(|v| {
-    //     let mut rensa_eval_board = player_put.clone();
-    //     let result = rensa_eval_board.put_one(v, x as usize);
-    //     (calc_score(&best.1, result.chains, player, feature), best.1.remove_hash)
-    // })).max_by_key(|x| x.0).unwrap()
-
    (0..W).map(|x| (1..=9).map(|v| {
         let mut rensa_eval_board = player_put.clone();
         let result = rensa_eval_board.put_one(v, x);
@@ -203,14 +194,14 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     b.player.add_obstacles(context.enemy_send_obstacles[search_turn - 1]);
                 }
 
-                // if b.remove_hash != 0 {
-                //     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
-                //     if h >= 5 {
-                //         // eprintln!("branch cut: {}", b.remove_hash);
-                //         return;
-                //     }
-                //     remove_hashes[search_turn].insert(b.remove_hash, h + 1);
-                // }
+                if b.remove_hash != 0 {
+                    let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
+                    if h >= 5 {
+                        // eprintln!("branch cut: {}", b.remove_hash);
+                        return;
+                    }
+                    remove_hashes[search_turn].insert(b.remove_hash, h + 1);
+                }
 
                 let result: Vec<_> = actions.par_iter().map(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
