@@ -303,7 +303,7 @@ impl<'a> BestAi<'a> {
         let mut best = self.simulate(self.replay_player.clone(), cur_enemy_replay.clone());
         let mut best_replay: replay::Replay = self.replay_player.clone();
         if best >= 0 {
-            let mut min = 9;
+            let mut min = 19;
             let player = self.player.clone();
             let fire = self.search(player.clone(), 7, 1500, vec![], vec![]);
             fire.iter().for_each(|f| {
