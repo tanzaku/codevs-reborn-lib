@@ -152,8 +152,8 @@ impl<'a> BestAi<'a> {
 
         if !self.replay_player.can_replay(&self.player) {
             // let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
-            let max_turn = if self.cur_turn <= 10 { 15 } else { 15 };
-            // let max_turn = if self.cur_turn <= 10 { 13 } else { 11 };
+            // let max_turn = if self.cur_turn <= 10 { 15 } else { 15 };
+            let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
             let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
             let mut enemy_send_obstacles = vec![0; max_turn];
 
