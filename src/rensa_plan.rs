@@ -91,7 +91,7 @@ fn eval<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) ->
 {
     let best = fire(player, feature, calc_score);
     let mut player_put = player.clone();
-    player_put.put_one(best.3, best.2 as usize);
+    player_put.put_one(best.3, best.2);
 
     // let max_score = (0..W).flat_map(|x| (1..=9).map(|v| {
     // })).max_by_key(|x| x.0).unwrap();
