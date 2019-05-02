@@ -93,12 +93,14 @@ fn eval<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) ->
     let mut player_put = player.clone();
     player_put.put_one(best.3, best.2);
 
-   (0..W).map(|x| (1..=9).map(|v| {
-        let mut rensa_eval_board = player_put.clone();
-        let result = rensa_eval_board.put_one(v, x);
-        let t: (i64, u64) = (calc_score(&best.1, result.chains as i32, player, feature), best.1.remove_hash);
-        t
-    }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
+    (best.0, best.1.remove_hash)
+
+//    (0..W).map(|x| (1..=9).map(|v| {
+//         let mut rensa_eval_board = player_put.clone();
+//         let result = rensa_eval_board.put_one(v, x);
+//         let t: (i64, u64) = (calc_score(&best.1, result.chains as i32, player, feature), best.1.remove_hash);
+//         t
+//     }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
 }
 
 fn do_action<F>(player: &mut player::Player, pack: &[[u8; 2]; 2], action: &action::Action, calc_score: &F) -> ((i64, u64), action::ActionResult, board::Feature, i64)
@@ -107,11 +109,12 @@ fn do_action<F>(player: &mut player::Player, pack: &[[u8; 2]; 2], action: &actio
     let result = player.put(pack, action);
 
     let feature = player.board.calc_feature();
-    let score = (0..W).map(|x| (1..=9).map(|v| {
-        let mut rensa_eval_board = player.clone();
-        let second_result = rensa_eval_board.put_one(v, x);
-        calc_score(&result, second_result.chains as i32, player, &feature)
-    }).max().unwrap()).max().unwrap();
+    // let score = (0..W).map(|x| (1..=9).map(|v| {
+    //     let mut rensa_eval_board = player.clone();
+    //     let second_result = rensa_eval_board.put_one(v, x);
+    //     calc_score(&result, second_result.chains as i32, player, &feature)
+    // }).max().unwrap()).max().unwrap();
+    let score = calc_score(&result, 0, player, &feature);
 
     let eval_result = eval(player, &feature, &calc_score);
     (eval_result, result, feature, score)
