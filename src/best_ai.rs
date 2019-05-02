@@ -139,7 +139,7 @@ impl<'a> BestAi<'a> {
             return None;
         }
 
-        if self.cur_turn == 10 && self.enemy.skill_guage >= 20 {
+        if self.cur_turn == 10 && self.enemy.skill_guage >= 30 {
             self.maybe_bommer = true;
         }
 
