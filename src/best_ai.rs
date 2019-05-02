@@ -284,7 +284,7 @@ impl<'a> BestAi<'a> {
 
     fn search_max_obstacles(&mut self, player: &player::Player, think_time_in_milli: u64, fall_obstacles: Vec<i32>) -> Option<replay::Replay> {
         let s = self.search(player.clone(), 7, think_time_in_milli, fall_obstacles, vec![]);
-        self.get_best(player.clone(), 40, s)
+        self.get_best(player.clone(), 60, s)
     }
 
     // 発火して潰せるなら潰す
@@ -295,6 +295,7 @@ impl<'a> BestAi<'a> {
             return None;
         }
         let cur_enemy_replay = cur_enemy_replay.unwrap();
+        let estimate_enemy = cur_enemy_replay.get_obstacles();
         if *cur_enemy_replay.get_obstacles().last().unwrap() < 40 {
             return None;
         }
@@ -307,22 +308,23 @@ impl<'a> BestAi<'a> {
             let fire = self.search(player.clone(), 7, 1500, vec![], vec![]);
             fire.iter().for_each(|f| {
                 //  Vec<(rensa_plan::BeamState, action::ActionResult)> {
-                if min < f.1.obstacle {
-                    min = f.1.obstacle;
-                    let replay = self.to_replay(&self.player, &f.0);
-                    if replay.is_none() {
-                        return;
-                    }
-                    let replay = replay.unwrap();
-                    let val = self.simulate(replay.clone(), cur_enemy_replay.clone());
-                    if best > val {
-                        best = val;
-                        best_replay = replay;
-                    }
+                if min >= f.1.obstacle {
+                    return;
+                }
+                min = f.1.obstacle;
+                let replay = self.to_replay(&self.player, &f.0);
+                if replay.is_none() {
+                    return;
+                }
+                let replay = replay.unwrap();
+                let val = self.simulate(replay.clone(), cur_enemy_replay.clone());
+                if best > val {
+                    best = val;
+                    best_replay = replay;
                 }
             });
 
-            eprintln!("new replay: {} {} {}", self.cur_turn, best_replay.get_obstacles().len(), best_replay.get_obstacles().last().unwrap());
+            eprintln!("new replay: {} {} {} {:?}", self.cur_turn, best_replay.get_obstacles().len(), best_replay.get_obstacles().last().unwrap(), estimate_enemy);
         }
         Some(best_replay)
     }
