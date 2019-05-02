@@ -266,7 +266,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     //     eprintln!("beam: {} {}", b.0.score, b.1.chains);
     // });
     if context.verbose {
-        // eprintln!("iter={}", iter);
+        eprintln!("iter={}", iter);
     }
     bests
 }
