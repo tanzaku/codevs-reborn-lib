@@ -174,7 +174,7 @@ impl<'a> BestAi<'a> {
                 let best = self.get_best(self.player.clone(), limit, states);
                 if let Some(best) = best {
                     self.replay_player = best;
-                    eprintln!("think done bommer: {} {} {}", self.cur_turn, self.replay_player.get_actions().len(), self.replay_player.get_obstacles().last().unwrap());
+                    eprintln!("think done bommer: {} {} {}", self.cur_turn, self.replay_player.get_actions().len(), self.replay_player.get_obstacles(&self.player).last().unwrap());
                 } else {
                     return Self::resign();
                 }
@@ -194,6 +194,12 @@ impl<'a> BestAi<'a> {
                 // emergency
                 if self.rest_time_in_milli < 30 * 1000 {
                     think_time_in_milli = 1000;
+                } else if self.cur_turn > 4 {
+                    think_time_in_milli /= 2;
+                    let cur_enemy_replay = self.search_max_obstacles(&self.enemy.clone(), think_time_in_milli, vec![]);
+                    if cur_enemy_replay.is_some() {
+                        enemy_send_obstacles = cur_enemy_replay.unwrap().get_obstacles(&self.enemy);
+                    }
                 }
 
                 let replay = self.replay_player.get_actions();
@@ -205,7 +211,7 @@ impl<'a> BestAi<'a> {
                     self.replay_player = best;
                     // eprintln!("rensa: {} {} {}", self.cur_turn, s.0.actions.len(), s.1.chains);
                     // if self.cur_turn == 0 {
-                        eprintln!("think done: {} {} {}", self.cur_turn, self.replay_player.get_actions().len(), self.replay_player.get_obstacles().last().unwrap());
+                        eprintln!("think done: {} {} {}", self.cur_turn, self.replay_player.get_actions().len(), self.replay_player.get_obstacles(&self.player).last().unwrap());
                     // }
                 } else {
                     return Self::resign();
@@ -330,8 +336,8 @@ impl<'a> BestAi<'a> {
             return None;
         }
         let cur_enemy_replay = cur_enemy_replay.unwrap();
-        let estimate_enemy = cur_enemy_replay.get_obstacles();
-        if *cur_enemy_replay.get_obstacles().last().unwrap() < 40 {
+        let estimate_enemy = cur_enemy_replay.get_obstacles(&enemy);
+        if *estimate_enemy.last().unwrap() < 40 {
             return None;
         }
 
@@ -362,7 +368,7 @@ impl<'a> BestAi<'a> {
                 }
             });
 
-            eprintln!("new replay: {} {} {} {:?}", self.cur_turn, best_replay.get_obstacles().len(), best_replay.get_obstacles().last().unwrap(), estimate_enemy);
+            eprintln!("new replay: {} {} {} {:?}", self.cur_turn, best_replay.get_obstacles(&player).len(), best_replay.get_obstacles(&player).last().unwrap(), estimate_enemy);
         }
         Some(best_replay)
     }
@@ -388,14 +394,14 @@ impl<'a> BestAi<'a> {
             return -1000;
         }
         let r2 = r2.unwrap();
-        let r1 = self.search_max_obstacles(&player, 500 * 2, r2.get_obstacles());
+        let r1 = self.search_max_obstacles(&player, 500 * 2, r2.get_obstacles(&enemy));
         // let r1 = self.search_max_obstacles(&player, 500 * 2, vec![]);
         if r1.is_none() {
             return 1000;
         }
         let r1 = r1.unwrap();
-        let o1 = *r1.get_obstacles().last().unwrap();
-        let o2 = *r2.get_obstacles().last().unwrap();
+        let o1 = r1.get_obstacles_score(&player);
+        let o2 = r2.get_obstacles_score(&enemy);
         // if o1 != o2 {
         //     return o1 - o2;
         // }
@@ -419,32 +425,33 @@ impl<'a> BestAi<'a> {
     //     }
     // }
 
-    fn extend(&mut self) {
-        if self.replay_player.len() != 3 {
-            return;
-        }
+    // fn extend(&mut self) {
+    //     if self.replay_player.len() != 3 {
+    //         return;
+    //     }
         
-        let enemy = self.enemy.clone();
-        let obstacles = self.replay_player.get_obstacles();
-        let cur_enemy = self.search_max_obstacles(&enemy, 1000, obstacles.clone());
+    //     let enemy = self.enemy.clone();
+    //     let obstacles = self.replay_player.get_obstacles();
+    //     let cur_enemy = self.search_max_obstacles(&enemy, 1000, obstacles.clone());
 
-        let cur_enemy = cur_enemy.map(|replay| *replay.get_obstacles().last().unwrap()).unwrap_or_default();
+    //     let cur_enemy = cur_enemy.map(|replay| *replay.get_obstacles().last().unwrap()).unwrap_or_default();
 
-        if cur_enemy > obstacles.iter().sum() {
-            let replay = self.replay_player.get_actions();
+    //     if cur_enemy > obstacles.iter().sum() {
+    //         let replay = self.replay_player.get_actions();
 
-            let states = self.search(enemy.clone(), 3, 1000, vec![], vec![]);
-            let enemy_replay = self.get_best(enemy.clone(), 40, states).unwrap();
-            let enemy_send_obstacles = enemy_replay.get_obstacles();
+    //         let states = self.search(enemy.clone(), 3, 1000, vec![], vec![]);
+    //         let enemy_replay = self.get_best(enemy.clone(), 40, states).unwrap();
+    //         let enemy_send_obstacles = enemy_replay.get_obstacles();
 
-            let states = self.search(self.player.clone(), 7, 2000, enemy_send_obstacles.clone(), replay);
-            let best = self.get_best(self.player.clone(), 200, states);
-            if let Some(best) = best {
-                self.replay_player = best;
-                eprintln!("extend: {} {} {} {:?}", self.cur_turn, self.replay_player.get_actions().len(), self.replay_player.get_obstacles().last().unwrap(), enemy_send_obstacles);
-            }
-        }
-    }
+    //         let states = self.search(self.player.clone(), 7, 2000, enemy_send_obstacles.clone(), replay);
+    //         let best = self.get_best(self.player.clone(), 200, states);
+    //         if let Some(best) = best {
+    //             self.replay_player = best;
+    //             eprintln!("extend: {} {} {} {:?}", self.cur_turn, self.replay_player.get_actions().len(),
+    //                 self.replay_player.get_obstacles().last().unwrap(), enemy_send_obstacles);
+    //         }
+    //     }
+    // }
 
     fn kill_bommer(&mut self) -> Option<action::Action> {
         if self.should_bombed() {

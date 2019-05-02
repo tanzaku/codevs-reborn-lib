@@ -75,8 +75,30 @@ impl Replay {
         self.expected_results.clone().into()
     }
 
-    pub fn get_obstacles(&self) -> Vec<i32> {
-        self.get_results().into_iter().map(|r| r.obstacle).collect()
+    pub fn get_obstacles(&self, player: &player::Player) -> Vec<i32> {
+        let mut obstacle = player.obstacle;
+        self.get_results().into_iter().map(|r| {
+            if obstacle >= W as i32 {
+                obstacle -= W as i32;
+            }
+            obstacle -= r.obstacle;
+            let result = std::cmp::max(-obstacle, 0);
+            obstacle = std::cmp::max(obstacle, 0);
+            result
+        }).collect()
+    }
+
+    pub fn get_obstacles_score(&self, player: &player::Player) -> i32 {
+        let mut fall = 0;
+        let mut obstacle = player.obstacle;
+        self.get_results().into_iter().for_each(|r| {
+            if obstacle >= W as i32 {
+                obstacle -= W as i32;
+                fall += W as i32;
+            }
+            obstacle -= r.obstacle;
+        });
+        -obstacle - fall
     }
 
     pub fn len(&self) -> usize {
