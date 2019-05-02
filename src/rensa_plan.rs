@@ -115,8 +115,6 @@ fn do_action<F>(player: &mut player::Player, pack: &[[u8; 2]; 2], action: &actio
 {
     let result = player.put(pack, action);
 
-    // let max_score = (0..W).flat_map(|x| (1..=9).map(|v| {
-    // })).max_by_key(|x| x.0).unwrap();
     let feature = player.board.calc_feature();
     let score = (0..W).map(|x| (1..=9).map(|v| {
         let mut rensa_eval_board = player.clone();

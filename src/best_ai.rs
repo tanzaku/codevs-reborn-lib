@@ -155,6 +155,7 @@ impl<'a> BestAi<'a> {
             // let max_turn = if self.cur_turn <= 10 { 15 } else { 15 };
             // let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
             let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
+            let limit = if self.cur_turn <= 10 { 60 } else { 30 };
             // let mut think_time_in_milli = 5000;
             let mut enemy_send_obstacles = vec![0; max_turn];
 
@@ -166,7 +167,7 @@ impl<'a> BestAi<'a> {
             let replay = self.replay_player.get_actions();
             // let replay = vec![];
             let states = self.search(self.player.clone(), max_turn, think_time_in_milli, enemy_send_obstacles, replay);
-            let best = self.get_best(self.player.clone(), 60, states);
+            let best = self.get_best(self.player.clone(), limit, states);
             // let best = self.get_best(self.player.clone(), 40, states);
             if let Some(best) = best {
                 self.replay_player = best;
