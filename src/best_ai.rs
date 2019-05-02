@@ -210,9 +210,7 @@ impl<'a> BestAi<'a> {
                 } else {
                     return Self::resign();
                 }
-            }
-
-            if self.rest_time_in_milli >= 30 * 1000 {
+            } else if self.rest_time_in_milli >= 30 * 1000 {
                 if let Some(r) = self.fire_timing() {
                     self.replay_player = r;
                 }
@@ -381,14 +379,14 @@ impl<'a> BestAi<'a> {
             enemy.obstacle -= min;
             turn += 1;
         }
-        // let r2 = self.search_max_obstacles(&enemy, 500 * 2, r1.get_obstacles());
-        let r2 = self.search_max_obstacles(&enemy, 500 * 2, vec![]);
+        // let r2 = self.search_max_obstacles(&enemy, 500 * 3, r1.get_obstacles());
+        let r2 = self.search_max_obstacles(&enemy, 500 * 3, vec![]);
         if r2.is_none() {
             return -1000;
         }
         let r2 = r2.unwrap();
-        let r1 = self.search_max_obstacles(&player, 500 * 2, r2.get_obstacles());
-        // let r1 = self.search_max_obstacles(&player, 500 * 2, vec![]);
+        let r1 = self.search_max_obstacles(&player, 500 * 3, r2.get_obstacles());
+        // let r1 = self.search_max_obstacles(&player, 500 * 3, vec![]);
         if r1.is_none() {
             return 1000;
         }
