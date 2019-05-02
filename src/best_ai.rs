@@ -320,8 +320,12 @@ impl<'a> BestAi<'a> {
 
     // 発火して潰せるなら潰す
     fn fire_timing(&mut self) -> Option<replay::Replay> {
+        if self.cur_turn % 3 != 2 {
+            return None;
+        }
+
         let enemy = self.enemy.clone();
-        let cur_enemy_replay = self.search_max_obstacles(&enemy, 500, vec![]);
+        let cur_enemy_replay = self.search_max_obstacles(&enemy, 500 * 3, vec![]);
         if cur_enemy_replay.is_none() {
             return None;
         }
@@ -377,8 +381,8 @@ impl<'a> BestAi<'a> {
             enemy.obstacle -= min;
             turn += 1;
         }
-        let r1 = self.search_max_obstacles(&player, 500, vec![]);
-        let r2 = self.search_max_obstacles(&enemy, 500, vec![]);
+        let r1 = self.search_max_obstacles(&player, 500 * 3, vec![]);
+        let r2 = self.search_max_obstacles(&enemy, 500 * 3, vec![]);
         if r1.is_none() {
             return 1000;
         }
