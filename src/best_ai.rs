@@ -382,12 +382,12 @@ impl<'a> BestAi<'a> {
             enemy.obstacle -= min;
             turn += 1;
         }
-        let r1 = self.search_max_obstacles(&player, 500 * 3, vec![]);
+        let r1 = self.search_max_obstacles(&player, 500 * 2, vec![]);
         if r1.is_none() {
             return 1000;
         }
         let r1 = r1.unwrap();
-        let r2 = self.search_max_obstacles(&enemy, 500 * 3, r1.get_obstacles());
+        let r2 = self.search_max_obstacles(&enemy, 500 * 2, r1.get_obstacles());
         if r2.is_none() {
             return -1000;
         }
