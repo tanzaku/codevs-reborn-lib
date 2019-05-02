@@ -347,6 +347,9 @@ impl<'a> BestAi<'a> {
                     return;
                 }
                 min = f.1.obstacle;
+                if min > 60 {
+                    min = 10000;
+                }
                 let replay = self.to_replay(&self.player, &f.0);
                 if replay.is_none() {
                     return;
