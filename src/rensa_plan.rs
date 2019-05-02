@@ -166,14 +166,14 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     b.player.add_obstacles(context.enemy_send_obstacles[search_turn - 1]);
                 }
 
-                if b.remove_hash != 0 {
-                    let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
-                    if h >= 5 {
-                        // eprintln!("branch cut: {}", b.remove_hash);
-                        return;
-                    }
-                    remove_hashes[search_turn].insert(b.remove_hash, h + 1);
-                }
+                // if b.remove_hash != 0 {
+                //     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
+                //     if h >= 5 {
+                //         // eprintln!("branch cut: {}", b.remove_hash);
+                //         return;
+                //     }
+                //     remove_hashes[search_turn].insert(b.remove_hash, h + 1);
+                // }
 
                 let result: Vec<_> = actions.par_iter().map(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
