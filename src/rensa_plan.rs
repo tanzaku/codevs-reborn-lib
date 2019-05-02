@@ -75,6 +75,8 @@ pub struct PlanContext {
     pub verbose: bool,
 }
 
+const SECOND_CHAINS_SCORE: bool = true;
+
 fn fire<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) -> (i64, action::ActionResult, usize, u64)
     where F: Fn(&action::ActionResult, i32, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
@@ -93,14 +95,16 @@ fn eval<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) ->
     let mut player_put = player.clone();
     player_put.put_one(best.3, best.2);
 
-    (best.0, best.1.remove_hash)
-
-//    (0..W).map(|x| (1..=9).map(|v| {
-//         let mut rensa_eval_board = player_put.clone();
-//         let result = rensa_eval_board.put_one(v, x);
-//         let t: (i64, u64) = (calc_score(&best.1, result.chains as i32, player, feature), best.1.remove_hash);
-//         t
-//     }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
+    if SECOND_CHAINS_SCORE {
+        (0..W).map(|x| (1..=9).map(|v| {
+                let mut rensa_eval_board = player_put.clone();
+                let result = rensa_eval_board.put_one(v, x);
+                let t: (i64, u64) = (calc_score(&best.1, result.chains as i32, player, feature), best.1.remove_hash);
+                t
+            }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
+    } else {
+        (best.0, best.1.remove_hash)
+    }
 }
 
 fn do_action<F>(player: &mut player::Player, pack: &[[u8; 2]; 2], action: &action::Action, calc_score: &F) -> ((i64, u64), action::ActionResult, board::Feature, i64)
@@ -109,12 +113,16 @@ fn do_action<F>(player: &mut player::Player, pack: &[[u8; 2]; 2], action: &actio
     let result = player.put(pack, action);
 
     let feature = player.board.calc_feature();
-    // let score = (0..W).map(|x| (1..=9).map(|v| {
-    //     let mut rensa_eval_board = player.clone();
-    //     let second_result = rensa_eval_board.put_one(v, x);
-    //     calc_score(&result, second_result.chains as i32, player, &feature)
-    // }).max().unwrap()).max().unwrap();
-    let score = calc_score(&result, 0, player, &feature);
+    let score =
+        if SECOND_CHAINS_SCORE {
+            (0..W).map(|x| (1..=9).map(|v| {
+                let mut rensa_eval_board = player.clone();
+                let second_result = rensa_eval_board.put_one(v, x);
+                calc_score(&result, second_result.chains as i32, player, &feature)
+            }).max().unwrap()).max().unwrap()
+        } else {
+            calc_score(&result, 0, player, &feature)
+        };
 
     let eval_result = eval(player, &feature, &calc_score);
     (eval_result, result, feature, score)
@@ -197,14 +205,14 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     b.player.add_obstacles(context.enemy_send_obstacles[search_turn - 1]);
                 }
 
-                if b.remove_hash != 0 {
-                    let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
-                    if h >= 5 {
-                        // eprintln!("branch cut: {}", b.remove_hash);
-                        return;
-                    }
-                    remove_hashes[search_turn].insert(b.remove_hash, h + 1);
-                }
+                // if b.remove_hash != 0 {
+                //     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
+                //     if h >= 5 {
+                //         // eprintln!("branch cut: {}", b.remove_hash);
+                //         return;
+                //     }
+                //     remove_hashes[search_turn].insert(b.remove_hash, h + 1);
+                // }
 
                 let result: Vec<_> = actions.par_iter().map(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
