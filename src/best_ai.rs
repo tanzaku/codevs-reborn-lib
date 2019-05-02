@@ -159,7 +159,7 @@ impl<'a> BestAi<'a> {
         if self.maybe_bommer {
             if self.cur_turn == 10 || !self.replay_player.can_replay(&self.player) {
                 let max_turn = if self.cur_turn <= 10 { 8 } else { 16 };
-                let mut think_time_in_milli = 5000 * 2;
+                let mut think_time_in_milli = 15000;
                 let limit = 200;
                 let mut enemy_send_obstacles = vec![0; max_turn];
 
