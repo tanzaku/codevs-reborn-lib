@@ -210,8 +210,10 @@ impl<'a> BestAi<'a> {
                 }
             }
 
-            if let Some(r) = self.fire_timing() {
-                self.replay_player = r;
+            if self.rest_time_in_milli >= 30 * 1000 {
+                if let Some(r) = self.fire_timing() {
+                    self.replay_player = r;
+                }
             }
         }
 
