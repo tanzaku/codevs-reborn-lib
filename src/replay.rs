@@ -10,7 +10,7 @@ use super::skill_plan;
 use super::consts::{W,H,MAX_TURN};
 
 
-
+#[derive(Clone)]
 pub struct Replay {
     expected_results: VecDeque<action::ActionResult>,
     packs: VecDeque<[[u8; 2]; 2]>,
