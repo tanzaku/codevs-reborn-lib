@@ -316,7 +316,7 @@ impl<'a> BestAi<'a> {
     }
 
     fn search_max_obstacles(&mut self, player: &player::Player, think_time_in_milli: u64, fall_obstacles: Vec<i32>) -> Option<replay::Replay> {
-        let s = self.search(player.clone(), 7, think_time_in_milli, fall_obstacles, vec![]);
+        let s = self.search(player.clone(), 10, think_time_in_milli, fall_obstacles, vec![]);
         self.get_best(player.clone(), 60, s)
     }
 
@@ -342,7 +342,7 @@ impl<'a> BestAi<'a> {
         if best >= 0 {
             let mut min = 19;
             let player = self.player.clone();
-            let fire = self.search(player.clone(), 7, 1500, vec![], vec![]);
+            let fire = self.search(player.clone(), 10, 1500, vec![], vec![]);
             fire.iter().for_each(|f| {
                 //  Vec<(rensa_plan::BeamState, action::ActionResult)> {
                 if min >= f.1.obstacle {
@@ -401,9 +401,9 @@ impl<'a> BestAi<'a> {
         // r1.len() as i32 - r2.len() as i32
         let score = player.obstacle + o2 - (enemy.obstacle + o1);
         // let score = o2 - o1;
-        if score < 0 {
-            eprintln!("improve: {} {} {} {} {:?} {:?}", player.obstacle, o1, enemy.obstacle, o2, r1.get_obstacles(), r2.get_obstacles());
-        }
+        // if score < 0 {
+        //     eprintln!("improve: {} {} {} {} {:?} {:?}", player.obstacle, o1, enemy.obstacle, o2, r1.get_obstacles(), r2.get_obstacles());
+        // }
         score
     }
 
