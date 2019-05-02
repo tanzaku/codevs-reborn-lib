@@ -209,6 +209,10 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                             (0..W).map(|x| (1..=9).map(|v| {
                                 let mut rensa_eval_board = player.clone();
                                 // let result = rensa_eval_board.put(&fall, &fire_action);
+                                if context.plan_start_turn == 0 {
+                                    use super::consts::{W,H,VANISH,OBSTACLE};
+                                    rensa_eval_board.put_one(OBSTACLE, x as usize);
+                                }
                                 let result = rensa_eval_board.put_one(v, x as usize);
                                 // (calc_score(&result, &player, search_turn, &feature), result)
                                 (calc_score(&result, &player, search_turn, &feature), result.remove_hash)
