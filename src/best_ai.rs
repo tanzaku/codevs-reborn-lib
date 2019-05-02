@@ -325,7 +325,7 @@ impl<'a> BestAi<'a> {
         }
 
         let enemy = self.enemy.clone();
-        let cur_enemy_replay = self.search_max_obstacles(&enemy, 500 * 3, vec![]);
+        let cur_enemy_replay = self.search_max_obstacles(&enemy, 500 * 4, vec![]);
         if cur_enemy_replay.is_none() {
             return None;
         }
@@ -338,9 +338,9 @@ impl<'a> BestAi<'a> {
         let mut best = self.simulate(self.replay_player.clone(), cur_enemy_replay.clone());
         let mut best_replay: replay::Replay = self.replay_player.clone();
         if best >= 0 {
-            let mut min = 19;
+            let mut min = 29;
             let player = self.player.clone();
-            let fire = self.search(player.clone(), 10, 1500, vec![], vec![]);
+            let fire = self.search(player.clone(), 10, 1000, vec![], vec![]);
             fire.iter().for_each(|f| {
                 //  Vec<(rensa_plan::BeamState, action::ActionResult)> {
                 if min >= f.1.obstacle {
@@ -379,14 +379,14 @@ impl<'a> BestAi<'a> {
             enemy.obstacle -= min;
             turn += 1;
         }
-        // let r2 = self.search_max_obstacles(&enemy, 500 * 3, r1.get_obstacles());
-        let r2 = self.search_max_obstacles(&enemy, 500 * 3, vec![]);
+        // let r2 = self.search_max_obstacles(&enemy, 500 * 2, r1.get_obstacles());
+        let r2 = self.search_max_obstacles(&enemy, 500 * 2, vec![]);
         if r2.is_none() {
             return -1000;
         }
         let r2 = r2.unwrap();
-        let r1 = self.search_max_obstacles(&player, 500 * 3, r2.get_obstacles());
-        // let r1 = self.search_max_obstacles(&player, 500 * 3, vec![]);
+        let r1 = self.search_max_obstacles(&player, 500 * 2, r2.get_obstacles());
+        // let r1 = self.search_max_obstacles(&player, 500 * 2, vec![]);
         if r1.is_none() {
             return 1000;
         }
