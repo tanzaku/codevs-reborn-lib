@@ -2,7 +2,7 @@
 use super::action;
 use super::board;
 
-const W: i32 = 10;
+use super::consts::{W,H,VANISH,OBSTACLE};
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Player {
@@ -18,17 +18,18 @@ impl Player {
     }
 
     pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
-        if self.obstacle >= W {
-            self.obstacle -= W;
-            self.board.fall_obstacle();
+        if self.obstacle >= W as i32 {
+            // self.obstacle -= W;
+            // self.board.fall_obstacle();
+            self.board.put_one(OBSTACLE, pos);
         }
         
         self.board.put_one(v, pos)
     }
 
     pub fn put(&mut self, pack: &[[u8; 2]; 2], action: &action::Action) -> action::ActionResult {
-        if self.obstacle >= W {
-            self.obstacle -= W;
+        if self.obstacle >= W as i32 {
+            self.obstacle -= W as i32;
             self.board.fall_obstacle();
         }
         
