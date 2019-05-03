@@ -181,12 +181,14 @@ impl<'a> BestAi<'a> {
             }
         } else {
             let enemy_obstacles = self.replay_enemy.get_obstacles(&self.enemy);
+            // let enemy_obstacles = [];
             if !self.replay_player.can_replay(&self.player, &enemy_obstacles) {
                 let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
+                // let max_turn = 13;
                 // let max_turn = if self.cur_turn <= 10 { 15 } else { 15 };
                 // let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
-                // let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
-                let mut think_time_in_milli = 5000 * 3;
+                let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
+                // let mut think_time_in_milli = 5000 * 3;
                 // let limit = if self.cur_turn <= 10 { 60 } else { 30 };
                 let limit = 60;
                 // let mut think_time_in_milli = 5000;
@@ -195,7 +197,7 @@ impl<'a> BestAi<'a> {
                 // emergency
                 if self.rest_time_in_milli < 30 * 1000 {
                     think_time_in_milli = 1000;
-                } else if self.cur_turn > 4 {
+                } else if self.cur_turn > 4 && false {
                     think_time_in_milli = 10000;
                     let cur_enemy_replay = self.search_max_obstacles(&self.enemy.clone(), 5000, vec![]);
                     if cur_enemy_replay.is_some() {
@@ -226,14 +228,16 @@ impl<'a> BestAi<'a> {
                     return Self::resign();
                 }
             } else if self.rest_time_in_milli >= 30 * 1000 {
-                if let Some(r) = self.fire_timing() {
-                    self.replay_player = r;
-                }
+                // if let Some(r) = self.fire_timing() {
+                //     self.replay_player = r;
+                // }
             }
         }
 
         // self.gyoushi();
         // self.extend();
+
+        self.replay_enemy.replay();
         self.replay_player.replay()
     }
 
@@ -241,8 +245,9 @@ impl<'a> BestAi<'a> {
         // let mut enemy_send_obstacles = vec![0; max_turn];
 
         let weights = [
-                        (50000,10000,1000,300),
-                        // (50000,40000,1000,1000),
+                        // (50000,10000,1000,300),
+                        // (50000,1000,10000,300),
+                        (50000,40000,1000,1000),
                         // (50000,60000,10000,10000),
                     ];
 
@@ -266,20 +271,31 @@ impl<'a> BestAi<'a> {
                                 + feature.keima2 * w.2
                                 + feature.tate2 * w.3
                                 ;
-            obstacle_score as i64 * 50000000000 + second_chains as i64 * 500000000 + feature_score as i64
+            let feature_score = feature_score as i64 + feature.num_block as i64 * 500000000000;
+            let feature_score = feature_score as i64 + feature.num_block as i64 * 50000000;
+            obstacle_score as i64 * 50000000000 + second_chains as i64 * 500000000 + feature_score
+            // result.chains as i64 * 10000
+            //                     + feature.num_block as i64 * 300
         })
     }
 
     fn get_best(&self, player: player::Player, limit_obstacle: i32, enemy_send_obstacles: &[i32], states: Vec<(rensa_plan::BeamState, action::ActionResult)>) -> Option<replay::Replay> {
         let mut max = -1;
         let mut choosed = None;
+        let mut turn = 0;
+        let mut choosed_turn = -100;
         states.iter().for_each(|s| {
             let val = std::cmp::min(limit_obstacle, s.1.obstacle);
+            // if max < val && (max < 30 || turn - choosed_turn < 3) {
             if max < val {
                 max = val;
                 choosed = Some(s);
+                choosed_turn = turn;
             }
+            // eprintln!("state: {} {}", turn, s.1.chains);
+            turn += 1;
         });
+
 
         let mut replay = replay::Replay::new();
         match choosed {
@@ -397,27 +413,22 @@ impl<'a> BestAi<'a> {
             enemy.obstacle -= min;
             turn += 1;
         }
-        // let r2 = self.search_max_obstacles(&enemy, 500 * 2, r1.get_obstacles());
         let r2 = self.search_max_obstacles(&enemy, 500 * 3, vec![]);
         if r2.is_none() {
             return -1000;
         }
         let r2 = r2.unwrap();
-        let r1 = self.search_max_obstacles(&player, 500 * 2, r2.get_obstacles(&enemy));
-        // let r1 = self.search_max_obstacles(&player, 500 * 2, vec![]);
-        if r1.is_none() {
-            return 1000;
-        }
-        let r1 = r1.unwrap();
-        let o1 = r1.get_obstacles_score(&player);
-        let o2 = r2.get_obstacles_score(&enemy);
-        // if o1 != o2 {
-        //     return o1 - o2;
+        // let r1 = self.search_max_obstacles(&player, 500 * 2, r2.get_obstacles(&enemy));
+        // if r1.is_none() {
+        //     return 1000;
         // }
-        // r1.len() as i32 - r2.len() as i32
-        // let score = player.obstacle + o2 - (enemy.obstacle + o1);
-        let score = o2 - o1;
+        // let r1 = r1.unwrap();
+        // let o1 = r1.get_obstacles_score(&player);
+        let o2 = r2.get_obstacles_score(&enemy);
+        // let score = o2 - o1;
+        let score = o2;
         // eprintln!("improve: {} {} {} {} {:?} {:?}", player.obstacle, o1, enemy.obstacle, o2, r1.get_obstacles(&player), r2.get_obstacles(&enemy));
+        eprintln!("improve: {} {} {:?}", enemy.obstacle, o2, r2.get_obstacles(&enemy));
         score
     }
 

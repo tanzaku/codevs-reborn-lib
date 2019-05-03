@@ -14,6 +14,8 @@ pub struct Feature {
     pub keima2: i32,
     pub tate: i32,
     pub tate2: i32,
+    pub num_block: i32,
+    pub var: i32,
 }
 
 #[derive(Clone)]
@@ -73,6 +75,36 @@ impl Board {
         score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, vanish_result.2)
     }
 
+    pub fn calc_max_rensa_by_erase_outer_block(&self) -> action::ActionResult {
+        let mut heights = [0; W];
+        (0..W).for_each(|i| heights[i] = self.height(i) as i32);
+
+        let vanish_result: Option<(u8, u8, u64)> = (0..W).map(|x| {
+            let mut l = heights[x] - 1;
+            if x > 0 { l = std::cmp::min(l, heights[x-1] - 1); }
+            if x < W - 1 { l = std::cmp::min(l, heights[x+1] - 1); }
+            l = std::cmp::max(l, 0);
+            let h = heights[x] - 1;
+
+            let r: Option<(u8, u8, u64)> = (l..h).map(|y| {
+                if (self.column[x] >> (y*4) & 0x0F) == OBSTACLE {
+                    return (0, 0, 0);
+                }
+                let mut b = self.clone();
+                unsafe {
+                    use std::arch::x86_64::*;
+                    b.column[x] = _pext_u64(b.column[x], !(0x0F << (y*4)));
+                }
+                let changed = 1<<x;
+                b.vanish(changed)
+            }).max_by_key(|r| r.0);
+            r
+        }).filter(|r| r.is_some()).map(|r| r.unwrap()).max_by_key(|r| r.0);
+
+        let vanish_result: (u8, u8, u64) = vanish_result.unwrap_or((0, 0, 0));
+        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, vanish_result.2)
+    }
+
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
         let mut changed = 0;
         let pattern = rotate(pattern, rot);
@@ -119,6 +151,9 @@ impl Board {
         let mut keima2 = 0;
         let mut tate = 0;
         let mut tate2 = 0;
+        let mut var = 0;
+        let mut heights = [0; W];
+        (0..W).for_each(|i| heights[i] = self.height(i));
         for i in 0..W-1 {
             let r = Self::calc_remove(self.column[i], self.column[i]<<8);
             tate += r.count_ones() / 4;
@@ -137,6 +172,8 @@ impl Board {
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
             keima2 += r.count_ones() / 4;
+
+            var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
         }
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
         tate += r.count_ones() / 4;
@@ -144,11 +181,15 @@ impl Board {
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
         tate2 += r.count_ones() / 4;
         
+        let mut num_block = (0..W).map(|x| self.height(x) as i32).sum();
+
         Feature {
             keima: keima as i32,
             keima2: keima2 as i32,
             tate: tate as i32,
             tate2: tate2 as i32,
+            num_block,
+            var: var as i32,
         }
     }
 
@@ -280,7 +321,7 @@ impl Board {
 
     pub fn hash(&self) -> u64 {
         let mut h = 0;
-        self.column.iter().for_each(|c| h += h * 31 + c);
+        self.column.iter().for_each(|c| h = h*31+c);
         h
     }
 }

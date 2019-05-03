@@ -23,12 +23,13 @@ pub struct BeamState {
     pub player: player::Player,
     pub score: i64,
     remove_hash: u64,
+    chains: u8,
     pub actions: u128,
 }
 
 impl BeamState {
-    fn new(player: player::Player, score: i64, remove_hash: u64, actions: u128) -> Self {
-        Self { player, score, remove_hash, actions, }
+    fn new(player: player::Player, score: i64, remove_hash: u64, chains: u8, actions: u128) -> Self {
+        Self { player, score, remove_hash, chains, actions, }
     }
     pub fn get_actions(&self) -> Vec<u8> {
         let b = (128 - self.actions.leading_zeros() + 7) / 8;
@@ -75,39 +76,43 @@ pub struct PlanContext {
     pub verbose: bool,
 }
 
-const SECOND_CHAINS_SCORE: bool = true;
+const SECOND_CHAINS_SCORE: bool = false;
 
 fn fire<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) -> (i64, action::ActionResult, usize, u64)
     where F: Fn(&action::ActionResult, i32, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
-    (0..W).map(|x| (1..=9).map(|v| {
-        let mut rensa_eval_board = player.clone();
-        let result = rensa_eval_board.put_one(v, x);
-        let t: (i64, action::ActionResult, usize, u64) = (calc_score(&result, 0, player, feature), result, x, v);
-        t
-    }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
+    // (0..W).map(|x| (1..=9).map(|v| {
+    //     let mut rensa_eval_board = player.clone();
+    //     let result = rensa_eval_board.put_one(v, x);
+    //     let t: (i64, action::ActionResult, usize, u64) = (calc_score(&result, 0, player, feature), result, x, v);
+    //     t
+    // }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
+    let result = player.board.calc_max_rensa_by_erase_outer_block();
+    (calc_score(&result, 0, player, feature), result, 0, 0)
 }
 
-fn eval<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) -> (i64, u64)
+fn eval<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) -> (i64, u8)
     where F: Fn(&action::ActionResult, i32, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
     let best = fire(player, feature, calc_score);
-    let mut player_put = player.clone();
-    player_put.put_one(best.3, best.2);
 
-    if SECOND_CHAINS_SCORE {
-        (0..W).map(|x| (1..=9).map(|v| {
-                let mut rensa_eval_board = player_put.clone();
-                let result = rensa_eval_board.put_one(v, x);
-                let t: (i64, u64) = (calc_score(&best.1, result.chains as i32, player, feature), best.1.remove_hash);
-                t
-            }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
-    } else {
-        (best.0, best.1.remove_hash)
-    }
+    // if SECOND_CHAINS_SCORE {
+    //     let mut player_put = player.clone();
+    //     player_put.put_one(best.3, best.2);
+
+    //     (0..W).map(|x| (1..=9).map(|v| {
+    //             let mut rensa_eval_board = player_put.clone();
+    //             let result = rensa_eval_board.put_one(v, x);
+    //             let t: (i64, u64) = (calc_score(&best.1, result.chains as i32, player, feature), best.1.remove_hash);
+    //             t
+    //         }).max_by_key(|x| x.0).unwrap()).max_by_key(|x| x.0).unwrap()
+    // } else {
+        // (best.0, best.1.remove_hash)
+    // }
+    (best.0, best.1.chains)
 }
 
-fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> ((i64, u64), action::ActionResult, board::Feature, i64)
+fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> ((i64, u8), action::ActionResult, board::Feature, i64)
     where F: Fn(&action::ActionResult, i32, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
     let turn = context.plan_start_turn + search_turn;
@@ -148,7 +153,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     let mut heaps = vec![BinaryHeap::new(); context.max_turn];
     // let mut candidates = Vec::new();
 
-    let initial_state = BeamState::new(context.player.clone(), 0, 0, 0);
+    let initial_state = BeamState::new(context.player.clone(), 0, 0, 0, 0);
     let mut bests = vec![(initial_state.clone(), action::ActionResult::new(0, 0, 0, 0, 0)); context.max_turn];
     heaps[0].push(initial_state);
 
@@ -198,6 +203,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
 
         iter += 1;
         let mut empty_all = true;
+        let mut max_chains = 0;
 
         (0..context.max_turn).for_each(|search_turn| {
             let turn = context.plan_start_turn + search_turn;
@@ -207,11 +213,14 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
             if let Some(mut b) = heaps[search_turn].pop() {
                 // if b.remove_hash != 0 {
                 //     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
-                //     if h >= 20 {
+                //     if h >= 5 {
                 //         // eprintln!("branch cut: {}", b.remove_hash);
                 //         return;
                 //     }
                 //     remove_hashes[search_turn].insert(b.remove_hash, h + 1);
+                // }
+                // if (b.chains as i8) < max_chains as i8 - 1 {
+                //     return;
                 // }
 
                 let result: Vec<_> = actions.par_iter().map(|a| {
@@ -237,14 +246,20 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                 result.into_iter().filter(|x| x.is_some()).map(|x| x.unwrap()).for_each(|x| {
                     let (player, score, max_score, actions, result) = x;
                     if player.board.is_dead() || !visited.insert(player.hash()) {
+                    // if player.board.is_dead() {
                         return;
                     }
                     // eprintln!("check: {} {}", search_turn, score);
-                    if bests[search_turn].0.score < score {
-                        bests[search_turn] = (BeamState::new(player.clone(), score + (rand.next() & 0xFF) as i64, 0, actions), result);
+                    // if bests[search_turn].0.score < score {
+                    //     bests[search_turn] = (BeamState::new(player.clone(), score + (rand.next() & 0xFF) as i64, 0, result.chains, actions), result.clone());
+                    // }
+                    if bests[search_turn].0.chains < result.chains {
+                        bests[search_turn] = (BeamState::new(player.clone(), score + (rand.next() & 0xFF) as i64, 0, result.chains, actions), result.clone());
                     }
+                    // if search_turn + 1 < context.max_turn && result.chains <= 1 {
+                    // if search_turn + 1 < context.max_turn && result.chains <= 0 {
                     if search_turn + 1 < context.max_turn {
-                        heaps[search_turn + 1].push(BeamState::new(player, max_score.0 + (rand.next() & 0xFF) as i64, max_score.1, actions));
+                        heaps[search_turn + 1].push(BeamState::new(player, max_score.0 + (rand.next() & 0xFF) as i64, 0, max_score.1, actions));
                     }
                 });
                     // if player.board.is_dead() || !visited.insert(player.hash()) {
@@ -255,6 +270,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     // }
                     // Some(BeamState::new(player, max_score.0, max_score.1.remove_hash, actions))
             };
+            max_chains = std::cmp::max(max_chains, bests[search_turn].1.chains);
         });
 
         if empty_all {
@@ -266,7 +282,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     //     eprintln!("beam: {} {}", b.0.score, b.1.chains);
     // });
     if context.verbose {
-        // eprintln!("iter={}", iter);
+        eprintln!("iter={}", iter);
     }
     bests
 }
