@@ -106,7 +106,8 @@ impl Replay {
             }
             obstacle -= r.obstacle;
         });
-        -obstacle - fall
+        // -obstacle - fall
+        -obstacle
     }
 
     pub fn len(&self) -> usize {
