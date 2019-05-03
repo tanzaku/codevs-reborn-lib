@@ -157,7 +157,7 @@ impl<'a> BestAi<'a> {
         // }
 
         if self.maybe_bommer {
-            if self.cur_turn == 10 || !self.replay_player.can_replay(&self.player) {
+            if self.cur_turn == 10 || !self.replay_player.can_replay(&self.player, &[]) {
                 // let max_turn = if self.cur_turn <= 10 { 8 } else { 16 };
                 let max_turn = if self.cur_turn <= 10 { 8 } else { 11 };
                 // let max_turn = 8;
@@ -180,7 +180,8 @@ impl<'a> BestAi<'a> {
                 }
             }
         } else {
-            if !self.replay_player.can_replay(&self.player) {
+            let enemy_obstacles = self.replay_enemy.get_obstacles(&self.enemy);
+            if !self.replay_player.can_replay(&self.player, &enemy_obstacles) {
                 let max_turn = if self.cur_turn <= 10 { 15 } else { 13 };
                 // let max_turn = if self.cur_turn <= 10 { 15 } else { 15 };
                 // let max_turn = if self.cur_turn <= 10 { 15 } else { 10 };
@@ -198,8 +199,9 @@ impl<'a> BestAi<'a> {
                     think_time_in_milli = 10000;
                     let cur_enemy_replay = self.search_max_obstacles(&self.enemy.clone(), 5000, vec![]);
                     if cur_enemy_replay.is_some() {
-                        enemy_send_obstacles = cur_enemy_replay.unwrap().get_obstacles(&self.enemy);
-                        eprintln!("enemy_send_obstacles: {:?}", enemy_send_obstacles);
+                        self.replay_enemy = cur_enemy_replay.unwrap();
+                        enemy_send_obstacles = self.replay_enemy.get_obstacles(&self.enemy);
+                        // eprintln!("enemy_send_obstacles: {:?}", enemy_send_obstacles);
                     }
                 }
 
@@ -232,7 +234,6 @@ impl<'a> BestAi<'a> {
 
         // self.gyoushi();
         // self.extend();
-
         self.replay_player.replay()
     }
 
@@ -375,6 +376,7 @@ impl<'a> BestAi<'a> {
                 }
             });
 
+            self.replay_enemy = cur_enemy_replay;
             eprintln!("new replay: {} {} {} {:?}", self.cur_turn, best_replay.get_obstacles(&player).len(), best_replay.get_obstacles(&player).last().unwrap(), estimate_enemy);
         }
         Some(best_replay)
@@ -385,7 +387,7 @@ impl<'a> BestAi<'a> {
         let mut enemy = self.enemy.clone();
 
         let mut turn = self.cur_turn;
-        while replay_player.can_replay(&player) && replay_enemy.can_replay(&enemy) {
+        while replay_player.can_replay(&player, &[]) && replay_enemy.can_replay(&enemy, &[]) {
             let a1 = replay_player.replay().unwrap();
             let a2 = replay_enemy.replay().unwrap();
             let r1 = player.put(&self.packs[turn], &a1);

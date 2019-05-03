@@ -30,19 +30,25 @@ impl Replay {
         self.actions.is_empty()
     }
 
-    pub fn can_replay(&self, player: &player::Player) -> bool {
+    pub fn can_replay(&self, player: &player::Player, enemy_send_obstacles: &[i32]) -> bool {
         if self.actions.is_empty() {
             return false;
         }
 
         let mut p = player.clone();
         let mut illegal_action = false;
+        let mut turn = 0;
         let result = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)| {
             let a = a.into();
             if a == action::Action::UseSkill && !p.can_use_skill() {
                 illegal_action = true;
             }
-            p.put(pack, &a)
+            let result = p.put(pack, &a);
+            if turn < enemy_send_obstacles.len() {
+                p.add_obstacles(enemy_send_obstacles[turn]);
+            }
+            turn += 1;
+            result
         }).last().unwrap();
 
         !illegal_action && &result == self.expected_results.back().unwrap()
