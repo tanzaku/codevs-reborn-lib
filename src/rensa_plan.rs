@@ -75,7 +75,7 @@ pub struct PlanContext {
     pub verbose: bool,
 }
 
-const SECOND_CHAINS_SCORE: bool = false;
+const SECOND_CHAINS_SCORE: bool = true;
 
 fn fire<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) -> (i64, action::ActionResult, usize, u64)
     where F: Fn(&action::ActionResult, i32, &player::Player, &board::Feature) -> i64 + Sync + Send
@@ -107,10 +107,16 @@ fn eval<F>(player: &player::Player, feature: &board::Feature, calc_score: &F) ->
     }
 }
 
-fn do_action<F>(player: &mut player::Player, pack: &[[u8; 2]; 2], action: &action::Action, calc_score: &F) -> ((i64, u64), action::ActionResult, board::Feature, i64)
+fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> ((i64, u64), action::ActionResult, board::Feature, i64)
     where F: Fn(&action::ActionResult, i32, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
+    let turn = context.plan_start_turn + search_turn;
+    let pack = &context.packs[turn];
     let result = player.put(pack, action);
+
+    if search_turn < context.enemy_send_obstacles.len() {
+        player.add_obstacles(context.enemy_send_obstacles[search_turn]);
+    }
 
     let feature = player.board.calc_feature();
     let score =
@@ -195,24 +201,18 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
 
         (0..context.max_turn).for_each(|search_turn| {
             let turn = context.plan_start_turn + search_turn;
-            let pack = context.packs[turn].clone();
-
             empty_all &= heaps[search_turn].is_empty();
 
             // eprintln!("come: {} {}", search_turn, heaps[search_turn].len());
             if let Some(mut b) = heaps[search_turn].pop() {
-                if search_turn > 0 && search_turn - 1 < context.enemy_send_obstacles.len() {
-                    b.player.add_obstacles(context.enemy_send_obstacles[search_turn - 1]);
-                }
-
-                if b.remove_hash != 0 {
-                    let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
-                    if h >= 5 {
-                        // eprintln!("branch cut: {}", b.remove_hash);
-                        return;
-                    }
-                    remove_hashes[search_turn].insert(b.remove_hash, h + 1);
-                }
+                // if b.remove_hash != 0 {
+                //     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
+                //     if h >= 5 {
+                //         // eprintln!("branch cut: {}", b.remove_hash);
+                //         return;
+                //     }
+                //     remove_hashes[search_turn].insert(b.remove_hash, h + 1);
+                // }
 
                 let result: Vec<_> = actions.par_iter().map(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
@@ -228,7 +228,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     }
 
                     let mut player = b.player.clone();
-                    let (max_score, result, feature, score) = do_action(&mut player, &pack, a, &calc_score);
+                    let (max_score, result, feature, score) = do_action(&mut player, search_turn, context, a, &calc_score);
                     let actions = push_action(b.actions, a);
                     
                     Some((player, score, max_score, actions, result))

@@ -48,11 +48,19 @@ impl Replay {
         !illegal_action && &result == self.expected_results.back().unwrap()
     }
 
-    pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], actions: &[u8]) {
+    pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], enemy_send_obstacles: &[i32], actions: &[u8]) {
         self.packs = packs.to_vec().into();
         self.actions = actions.to_vec().into();
         let mut p = player.clone();
-        self.expected_results = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)|  p.put(pack, &a.into())).collect();
+        let mut turn = 0;
+        self.expected_results = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)| {
+            let result = p.put(pack, &a.into());
+            if turn < enemy_send_obstacles.len() {
+                p.add_obstacles(enemy_send_obstacles[turn]);
+            }
+            turn += 1;
+            result
+        }).collect();
     }
 
     pub fn replay(&mut self) -> Option<action::Action> {
