@@ -97,17 +97,18 @@ impl Replay {
     }
 
     pub fn get_obstacles_score(&self, player: &player::Player) -> i32 {
-        let mut fall = 0;
+        // let mut fall = 0;
         let mut obstacle = player.obstacle;
-        self.get_results().into_iter().for_each(|r| {
-            if obstacle >= W as i32 {
-                obstacle -= W as i32;
-                fall += W as i32;
-            }
-            obstacle -= r.obstacle;
-        });
-        // -obstacle - fall
-        -obstacle
+        // self.get_results().into_iter().for_each(|r| {
+        //     if obstacle >= W as i32 {
+        //         obstacle -= W as i32;
+        //         fall += W as i32;
+        //     }
+        //     obstacle -= r.obstacle;
+        // });
+        // // -obstacle - fall
+        // -obstacle
+        self.get_results().into_iter().map(|r| r.obstacle).sum::<i32>() - obstacle
     }
 
     pub fn len(&self) -> usize {

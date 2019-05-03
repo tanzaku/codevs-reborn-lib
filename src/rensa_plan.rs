@@ -205,14 +205,14 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
 
             // eprintln!("come: {} {}", search_turn, heaps[search_turn].len());
             if let Some(mut b) = heaps[search_turn].pop() {
-                // if b.remove_hash != 0 {
-                //     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
-                //     if h >= 5 {
-                //         // eprintln!("branch cut: {}", b.remove_hash);
-                //         return;
-                //     }
-                //     remove_hashes[search_turn].insert(b.remove_hash, h + 1);
-                // }
+                if b.remove_hash != 0 {
+                    let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
+                    if h >= 20 {
+                        // eprintln!("branch cut: {}", b.remove_hash);
+                        return;
+                    }
+                    remove_hashes[search_turn].insert(b.remove_hash, h + 1);
+                }
 
                 let result: Vec<_> = actions.par_iter().map(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
