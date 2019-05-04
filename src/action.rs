@@ -14,7 +14,7 @@ pub struct ActionResult {
     pub chains: u8,
     pub obstacle: i32,
     pub skill_guage: i32,
-    // pub fire_height: u8,
+    pub fire_height: u8,
 }
 
 impl Action {

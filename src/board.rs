@@ -40,6 +40,10 @@ impl Board {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.column.iter().all(|b| *b == 0)
+    }
+
     pub fn from_board(board: [u8; (W * H) as usize]) -> Self {
         let mut b = Board::new();
         for y in 0..H {
@@ -69,21 +73,21 @@ impl Board {
         self.fall(pos, v);
         let changed = 1 << pos;
         let vanish_result = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, vanish_result.2)
+        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
     }
 
     pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult) {
         let mut heights = [0; W];
         (0..W).for_each(|i| heights[i] = self.height(i) as i32);
 
-        let vanish_result: Option<(Board, (u8, u8, u64))> = (0..W).map(|x| {
+        let vanish_result: Option<(Board, (u8, u8))> = (0..W).map(|x| {
             let mut l = heights[x] - 1;
             if x > 0 { l = std::cmp::min(l, heights[x-1] - 1); }
             if x < W - 1 { l = std::cmp::min(l, heights[x+1] - 1); }
             l = std::cmp::max(l, 0);
             let h = heights[x] - 1;
 
-            let r: Option<(Board, (u8, u8, u64))> = (l..h).map(|y| {
+            let r: Option<(Board, (u8, u8))> = (l..h).map(|y| {
                 if (self.column[x] >> (y*4) & 0x0F) == OBSTACLE {
                     // return (0, 0, 0);
                     return Default::default();
@@ -101,7 +105,7 @@ impl Board {
         }).filter(|r| r.is_some()).map(|r| r.unwrap()).max_by_key(|r| (r.1).0);
 
         let (board, vanish_result) = vanish_result.unwrap_or(Default::default());
-        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, vanish_result.2))
+        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1))
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
@@ -117,7 +121,7 @@ impl Board {
 
         // fixed changed
         let vanish_result = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, vanish_result.2)
+        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
     }
 
     pub fn use_skill(&mut self) -> action::ActionResult {
@@ -142,7 +146,7 @@ impl Board {
 
         let changed = self.fall_by_mask(&vanished);
         let vanish_result = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, vanish_result.0, vanish_result.1, vanish_result.2)
+        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, vanish_result.0, vanish_result.1)
     }
 
     pub fn calc_feature(&self) -> Feature {
