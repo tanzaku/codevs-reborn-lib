@@ -11,7 +11,7 @@ use super::consts::*;
 pub struct Replay {
     expected_results: VecDeque<action::ActionResult>,
     packs: VecDeque<[[u8; 2]; 2]>,
-    actions: VecDeque<u8>,
+    actions: VecDeque<action::Action>,
 }
 
 impl Replay {
@@ -36,8 +36,7 @@ impl Replay {
         let mut illegal_action = false;
         let mut turn = 0;
         let result = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)| {
-            let a = a.into();
-            if a == action::Action::UseSkill && !p.can_use_skill() {
+            if a == &action::Action::UseSkill && !p.can_use_skill() {
                 illegal_action = true;
             }
             let result = p.put(pack, &a);
@@ -51,13 +50,13 @@ impl Replay {
         !illegal_action && &result == self.expected_results.back().unwrap()
     }
 
-    pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], enemy_send_obstacles: &[i32], actions: &[u8]) {
+    pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], enemy_send_obstacles: &[i32], actions: &[action::Action]) {
         self.packs = packs.to_vec().into();
         self.actions = actions.to_vec().into();
         let mut p = player.clone();
         let mut turn = 0;
         self.expected_results = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)| {
-            let result = p.put(pack, &a.into());
+            let result = p.put(pack, &a);
             if turn < enemy_send_obstacles.len() {
                 p.add_obstacles(enemy_send_obstacles[turn]);
             }
@@ -79,7 +78,7 @@ impl Replay {
     }
 
     pub fn get_actions(&self) -> Vec<action::Action> {
-        self.actions.iter().map(|a| a.into()).collect()
+        self.actions.clone().into_iter().collect()
     }
 
     pub fn get_results(&self) -> Vec<action::ActionResult> {

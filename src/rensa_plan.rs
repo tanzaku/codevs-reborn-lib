@@ -14,11 +14,45 @@ use std::collections::HashSet;
 
 use rayon::prelude::*;
 
-
+// 探索結果
 #[derive(Clone, Default, PartialEq, Eq)]
-pub struct BeamState {
+pub struct SearchResult {
     pub player: player::Player,
     pub score: i64,
+    pub result: action::ActionResult,
+    actions: u128,
+}
+
+impl SearchResult {
+    pub fn get_actions(&self) -> Vec<action::Action> {
+        let b = (128 - self.actions.leading_zeros() + 7) / 8;
+        let mut a = self.actions;
+        let mut res = Vec::with_capacity(b as usize);
+        while a != 0 {
+            res.push(((a & 0xFF) as u8).into());
+            a >>= 8;
+        }
+        res
+    }
+}
+
+impl Ord for SearchResult {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.score.cmp(&other.score)
+    }
+}
+
+impl PartialOrd for SearchResult {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+// ビームサーチ状態
+#[derive(Clone, Default, PartialEq, Eq)]
+struct BeamState {
+    player: player::Player,
+    score: i64,
     actions: u128,
 }
 
@@ -26,24 +60,6 @@ impl BeamState {
     fn new(player: player::Player, score: i64, actions: u128) -> Self {
         Self { player, score, actions, }
     }
-    pub fn get_actions(&self) -> Vec<u8> {
-        let b = (128 - self.actions.leading_zeros() + 7) / 8;
-        let mut a = self.actions;
-        let mut res = vec![0; b as usize];
-        let mut i = 0;
-        while a != 0 {
-            res[i] = (a & 0xFF) as u8;
-            i += 1;
-            a >>= 8;
-        }
-        res
-    }
-}
-
-fn push_action(actions: u128, a: &action::Action) -> u128 {
-    let b = (128 - actions.leading_zeros() + 7) / 8;
-    let a: u128 = a.into();
-    actions | a << (b * 8)
 }
 
 impl Ord for BeamState {
@@ -58,6 +74,12 @@ impl PartialOrd for BeamState {
     }
 }
 
+fn push_action(actions: u128, a: &action::Action) -> u128 {
+    let b = (128 - actions.leading_zeros() + 7) / 8;
+    let a: u128 = a.into();
+    actions | a << (b * 8)
+}
+
 pub struct PlanContext<'a> {
     pub plan_start_turn: usize,
     pub max_turn: usize,
@@ -67,6 +89,7 @@ pub struct PlanContext<'a> {
     pub packs: &'a [[[u8; 2]; 2]],
 }
 
+// 一手進める
 fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> (action::ActionResult, i64, i64)
     where F: Fn(&action::ActionResult, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
@@ -85,8 +108,8 @@ fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanC
     (result, score, eval_score)
 }
 
-// pub fn calc_rensa_plan(&mut self, cur_turn: usize, max_fire_turn: usize, player: &player::Player, ) {
-pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, calc_score: F) -> Vec<(BeamState, action::ActionResult)>
+// ビームサーチ
+pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, calc_score: F) -> Vec<SearchResult>
     where F: Fn(&action::ActionResult, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
     assert!(context.max_turn <= 16);
@@ -95,8 +118,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     let actions = action::Action::all_actions();
     let mut heaps = vec![BinaryHeap::new(); context.max_turn];
 
+    let mut bests: Vec<SearchResult> = vec![Default::default(); context.max_turn];
     let initial_state = BeamState::new(context.player.clone(), 0, 0);
-    let mut bests = vec![(initial_state.clone(), action::ActionResult::new(0, 0, 0, 0)); context.max_turn];
     heaps[0].push(initial_state);
 
     let mut visited = HashSet::new();
@@ -142,13 +165,13 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     if player.board.is_dead() || !visited.insert(player.hash()) {
                         return;
                     }
-                    let score = score + (rand.next() & 0xFF) as i64;
-                    let eval_score = eval_score + (rand.next() & 0xFF) as i64;
-                    if bests[search_turn].0.score < score {
-                        bests[search_turn] = (BeamState::new(player.clone(), score, actions), result.clone());
-                    }
+                    let score = score * 256 + (rand.next() & 0xFF) as i64;
+                    let eval_score = eval_score * 256 + (rand.next() & 0xFF) as i64;
                     if search_turn + 1 < context.max_turn {
-                        heaps[search_turn + 1].push(BeamState::new(player, eval_score, actions));
+                        heaps[search_turn + 1].push(BeamState::new(player.clone(), eval_score, actions));
+                    }
+                    if bests[search_turn].score < score {
+                        bests[search_turn] = SearchResult { player, score, result, actions, };
                     }
                 });
             };
@@ -156,6 +179,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     }
 
     eprintln!("iter={}", _iter);
+    // bests.iter().for_each(|b| { eprintln!("obstacle={}", b.0.score / 10000000000); });
     bests
 }
 
