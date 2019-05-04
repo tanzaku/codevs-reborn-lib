@@ -7,7 +7,6 @@ use std::io::StdinLock;
 use super::action;
 use super::board;
 use super::player;
-use super::skill_plan;
 use super::consts::{W,H,MAX_TURN};
 
 pub struct SkillAi<'a> {
@@ -17,7 +16,6 @@ pub struct SkillAi<'a> {
     prev_obstacle_stock: i32,
     player: player::Player,
     enemy: player::Player,
-    skill_plan: skill_plan::SkillPlan,
 }
 
 impl<'a> SkillAi<'a> {
@@ -29,7 +27,6 @@ impl<'a> SkillAi<'a> {
             prev_obstacle_stock: 0,
             player: player::Player::new(board::Board::new(), 0, 0),
             enemy: player::Player::new(board::Board::new(), 0, 0),
-            skill_plan: skill_plan::SkillPlan::new(),
         }
     }
 
@@ -50,7 +47,6 @@ impl<'a> SkillAi<'a> {
             self.read1::<String>();
             self.packs.push([[v1, v2], [v3, v4]]);
         });
-        self.skill_plan.set_pack(self.packs.clone());
     }
 
     fn read_board(&mut self) -> board::Board {
@@ -90,15 +86,6 @@ impl<'a> SkillAi<'a> {
     }
 
     fn think(&mut self) -> action::Action {
-        let max_turn = 3;
-        let context = skill_plan::PlanContext {
-            plan_start_turn: self.cur_turn,
-            max_turn: max_turn,
-            think_time_in_sec: 1,
-            player: self.player.clone(),
-            enemy_send_obstacles: vec![0; max_turn],
-        };
-        self.skill_plan.calc_skill_plan(&context);
-        self.skill_plan.replay()
+        unreachable!()
     }
 }

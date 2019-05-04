@@ -1,9 +1,6 @@
 
 
 
-use std::ops::{Index,IndexMut};
-use std::collections::HashSet;
-
 use super::action;
 use super::score_calculator;
 
@@ -181,7 +178,7 @@ impl Board {
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
         tate2 += r.count_ones() / 4;
         
-        let mut num_block = (0..W).map(|x| self.height(x) as i32).sum();
+        let num_block = (0..W).map(|x| self.height(x) as i32).sum();
 
         Feature {
             keima: keima as i32,
@@ -328,57 +325,21 @@ impl Board {
 
 impl std::fmt::Debug for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let res = writeln!(f, "dump board");
-        writeln!(f, "{:?}", self.column);
+        writeln!(f, "dump board").expect("");
+        writeln!(f, "{:?}", self.column).expect("");
         for y in (0..H).rev() {
             // let mut res = String::new();
             self.column.iter().for_each(|c| {
                 let c = c >> (y * 4) & 0xF;
                 let c = if c > VANISH { 'X' } else { std::char::from_digit(c as u32, 10).unwrap() };
                 // res += &c.to_string();
-                write!(f, "{}", c);
+                write!(f, "{}", c).expect("");
             });
-            writeln!(f, "");
+            writeln!(f, "").expect("");
         }
-        res
+        Ok(())
     }
 }
-
-// impl Index<i32> for Board {
-//     type Output = u8;
-
-//     fn index(&self, ix: i32) -> &Self::Output {
-//         // if ix as usize >= self.board.len() {
-//         //     eprintln!("{:?}", self);
-//         //     eprintln!("max height: {}", self.height.iter().max().unwrap());
-//         // }
-//         if ix < 0 || ix as usize >= self.board.len() {
-//             return &OBSTACLE;
-//         }
-//         &self.board[ix as usize]
-//     }
-// }
-
-
-// impl IndexMut<i32> for Board {
-//     fn index_mut(&mut self, ix: i32) -> &mut u8 {
-//         &mut self.board[ix as usize]
-//     }
-// }
-
-// impl Index<(i32,i32)> for Board {
-//     type Output = u8;
-
-//     fn index(&self, ix: (i32,i32)) -> &Self::Output {
-//         &self.board[(ix.1*W+ix.0) as usize]
-//     }
-// }
-
-// impl IndexMut<(i32,i32)> for Board {
-//     fn index_mut(&mut self, ix: (i32,i32)) -> &mut u8 {
-//         &mut self.board[(ix.1*W+ix.0) as usize]
-//     }
-// }
 
 impl Default for Board {
     fn default() -> Self {
@@ -400,7 +361,6 @@ fn board_test_1() {
     board.column[0] = 0x07B1819;
     board.column[1] = 0x0008832;
     board.put(&[[1,9],[0,0]], 0, 0);
-    // eprintln!("{:?}", board);
     assert_eq!(board.column, [27, 136, 0, 0, 0, 0, 0, 0, 0, 0]);
 }
 
@@ -410,41 +370,5 @@ fn board_test_2() {
     board.column[0] = 0x17B1819;
     board.column[1] = 0x0098832;
     board.put(&[[9,5],[0,3]], 1, 3);
-    // eprintln!("{:?}", board);
     assert_eq!(board.column, [11, 1416, 3, 0, 0, 0, 0, 0, 0, 0]);
 }
-
-// #[test]
-// fn board_test() {
-//     let mut board = Board::new();
-//     let rensa = board.put(&[[9,5],[0,3]], 8, 3);
-//     // eprintln!("{:?}", board);
-//     assert_eq!(board[(8,0)], 9);
-//     assert_eq!(board[(9,0)], 3);
-//     assert_eq!(board[(8,1)], 5);
-//     assert_eq!(board[(9,1)], 0);
-//     assert_eq!(rensa.obstacle, 0);
-//     assert_eq!(rensa.skill_guage, 0);
-// }
-
-// #[test]
-// fn board_test_vanish() {
-//     let mut board = Board::new();
-//     let rensa = board.put(&[[9,5],[0,1]], 8, 3);
-//     // eprintln!("{:?}", board);
-//     assert_eq!(board[(8,0)], 5);
-//     assert_eq!(board[(9,0)], 0);
-//     assert_eq!(board[(8,1)], 0);
-//     assert_eq!(board[(9,1)], 0);
-//     assert_eq!(rensa.obstacle, 0);
-//     assert_eq!(rensa.skill_guage, 0);
-// }
-
-// #[test]
-// fn board_test_vanish2() {
-//     let mut board = Board::new();
-//     let rensa = board.put(&[[2,0],[5,2]], 1, 0);
-//     assert_eq!(board.max_height(), 2);
-//     let rensa = board.put(&[[1,0],[5,6]], 1, 0);
-//     assert_eq!(board.max_height(), 4);
-// }

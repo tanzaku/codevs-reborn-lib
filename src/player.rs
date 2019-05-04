@@ -2,7 +2,7 @@
 use super::action;
 use super::board;
 
-use super::consts::{W,H,VANISH,OBSTACLE};
+use super::consts::*;
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Player {

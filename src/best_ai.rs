@@ -10,7 +10,6 @@ use super::action;
 use super::board;
 use super::player;
 use super::rensa_plan;
-use super::skill_plan;
 use super::replay;
 use super::consts::{W,H,MAX_TURN};
 
@@ -163,7 +162,7 @@ impl<'a> BestAi<'a> {
                 // let max_turn = 8;
                 let mut think_time_in_milli = 15000;
                 let limit = 200;
-                let mut enemy_send_obstacles = vec![0; max_turn];
+                let enemy_send_obstacles = vec![0; max_turn];
 
                 if self.rest_time_in_milli < 30 * 1000 {
                     think_time_in_milli = 1000;
@@ -264,7 +263,7 @@ impl<'a> BestAi<'a> {
         };
 
         let w = weights[0];
-        rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, second_chains, player, feature| {
+        rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, second_chains, _player, feature| {
             let obstacle_score = std::cmp::min(result.obstacle, 200);
             let feature_score = feature.keima * w.0
                                 + feature.tate * w.1
@@ -406,8 +405,8 @@ impl<'a> BestAi<'a> {
         while replay_player.can_replay(&player, &[]) && replay_enemy.can_replay(&enemy, &[]) {
             let a1 = replay_player.replay().unwrap();
             let a2 = replay_enemy.replay().unwrap();
-            let r1 = player.put(&self.packs[turn], &a1);
-            let r2 = enemy.put(&self.packs[turn], &a2);
+            let _r1 = player.put(&self.packs[turn], &a1);
+            let _r2 = enemy.put(&self.packs[turn], &a2);
             let min = std::cmp::min(player.obstacle, enemy.obstacle);
             player.obstacle -= min;
             enemy.obstacle -= min;
@@ -505,7 +504,7 @@ impl<'a> BestAi<'a> {
                 verbose: true,
             };
 
-            let states = rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, second_chains, player, feature| {
+            let states = rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, second_chains, player, _feature| {
                 // result.skill_guage * 10000 + result.chains as i32 * 10 - search_turn as i32
                 (player.decrease_skill_guage as i64 * 10000 + second_chains as i64 + result.chains as i64 * 10) * 256
             });

@@ -3,11 +3,8 @@
 use std::collections::VecDeque;
 
 use super::action;
-use super::board;
 use super::player;
-use super::rensa_plan;
-use super::skill_plan;
-use super::consts::{W,H,MAX_TURN};
+use super::consts::*;
 
 
 #[derive(Clone)]
@@ -103,18 +100,7 @@ impl Replay {
     }
 
     pub fn get_obstacles_score(&self, player: &player::Player) -> i32 {
-        // let mut fall = 0;
-        let mut obstacle = player.obstacle;
-        // self.get_results().into_iter().for_each(|r| {
-        //     if obstacle >= W as i32 {
-        //         obstacle -= W as i32;
-        //         fall += W as i32;
-        //     }
-        //     obstacle -= r.obstacle;
-        // });
-        // // -obstacle - fall
-        // -obstacle
-        self.get_results().into_iter().map(|r| r.obstacle).sum::<i32>() - obstacle
+        self.get_results().into_iter().map(|r| r.obstacle).sum::<i32>() - player.obstacle
     }
 
     pub fn len(&self) -> usize {

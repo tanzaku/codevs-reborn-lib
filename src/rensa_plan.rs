@@ -5,15 +5,12 @@ use super::player;
 // use super::rand;
 use super::rand;
 
-use std::collections::VecDeque;
 use std::collections::BinaryHeap;
 use std::cmp::Ordering;
-use std::time::{Duration, Instant};
-use std::cmp::Reverse;
+use std::time::{Instant};
 
-use super::consts::{W,H};
+use super::consts::*;
 use std::collections::HashSet;
-use std::collections::HashMap;
 
 use rayon::prelude::*;
 
@@ -192,7 +189,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     //     }
     // }
 
-    let mut remove_hashes: Vec<HashMap<u64, u8>> = vec![HashMap::new(); context.max_turn];
+    // let mut remove_hashes: Vec<HashMap<u64, u8>> = vec![HashMap::new(); context.max_turn];
     let mut iter = 0;
     loop {
         let elapsed = timer.elapsed();
@@ -210,7 +207,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
             empty_all &= heaps[search_turn].is_empty();
 
             // eprintln!("come: {} {}", search_turn, heaps[search_turn].len());
-            if let Some(mut b) = heaps[search_turn].pop() {
+            // if let Some(mut b) = heaps[search_turn].pop() {
+            if let Some(b) = heaps[search_turn].pop() {
                 // if b.remove_hash != 0 {
                 //     let h = remove_hashes[search_turn].get(&b.remove_hash).map(|c| *c).unwrap_or_default();
                 //     if h >= 5 {
@@ -229,7 +227,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     }
 
                     if context.plan_start_turn == 0 {
-                        if let action::Action::PutBlock { pos, rot } = a {
+                        if let action::Action::PutBlock { pos, rot: _ } = a {
                             if turn == 0 && *pos != W / 2 {
                                 return None;
                             }
@@ -237,7 +235,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     }
 
                     let mut player = b.player.clone();
-                    let (max_score, result, feature, score) = do_action(&mut player, search_turn, context, a, &calc_score);
+                    let (max_score, result, _feature, score) = do_action(&mut player, search_turn, context, a, &calc_score);
                     let actions = push_action(b.actions, a);
                     
                     Some((player, score, max_score, actions, result))
