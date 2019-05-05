@@ -4,6 +4,7 @@ use super::board;
 use super::player;
 // use super::rand;
 use super::rand;
+use super::replay;
 
 use std::collections::BinaryHeap;
 use std::cmp::Ordering;
@@ -16,15 +17,13 @@ use rayon::prelude::*;
 
 // 探索結果
 #[derive(Clone, Default, PartialEq, Eq)]
-pub struct SearchResult {
-    pub player: player::Player,
-    pub score: i64,
-    pub result: action::ActionResult,
+struct SearchResult {
+    score: i64,
     actions: u128,
 }
 
 impl SearchResult {
-    pub fn get_actions(&self) -> Vec<action::Action> {
+    fn get_actions(&self) -> Vec<action::Action> {
         let b = (128 - self.actions.leading_zeros() + 7) / 8;
         let mut a = self.actions;
         let mut res = Vec::with_capacity(b as usize);
@@ -33,18 +32,6 @@ impl SearchResult {
             a >>= 8;
         }
         res
-    }
-}
-
-impl Ord for SearchResult {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.score.cmp(&other.score)
-    }
-}
-
-impl PartialOrd for SearchResult {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -90,7 +77,7 @@ pub struct PlanContext<'a> {
 }
 
 // 一手進める
-fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> (action::ActionResult, i64, i64)
+fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> (i64, i64)
     where F: Fn(&action::ActionResult, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
     let turn = context.plan_start_turn + search_turn;
@@ -105,11 +92,11 @@ fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanC
     let eval_result = player.board.calc_max_rensa_by_erase_outer_block().1;
     let score = calc_score(&result, player, &feature);
     let eval_score = calc_score(&eval_result, player, &feature);
-    (result, score, eval_score)
+    (score, eval_score)
 }
 
 // ビームサーチ
-pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, calc_score: F) -> Vec<SearchResult>
+pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, calc_score: F) -> Vec<replay::Replay>
     where F: Fn(&action::ActionResult, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
     assert!(context.max_turn <= 16);
@@ -154,14 +141,14 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     }
 
                     let mut player = b.player.clone();
-                    let (result, score, eval_score) = do_action(&mut player, search_turn, context, a, &calc_score);
+                    let (score, eval_score) = do_action(&mut player, search_turn, context, a, &calc_score);
                     let actions = push_action(b.actions, a);
                     
-                    Some((player, score, eval_score, actions, result))
+                    Some((player, score, eval_score, actions))
                 }).collect();
 
                 results.into_iter().filter(|x| x.is_some()).map(|x| x.unwrap()).for_each(|x| {
-                    let (player, score, eval_score, actions, result) = x;
+                    let (player, score, eval_score, actions) = x;
                     if player.board.is_dead() || !visited.insert(player.hash()) {
                         return;
                     }
@@ -171,7 +158,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                         heaps[search_turn + 1].push(BeamState::new(player.clone(), eval_score, actions));
                     }
                     if bests[search_turn].score < score {
-                        bests[search_turn] = SearchResult { player, score, result, actions, };
+                        bests[search_turn] = SearchResult { score, actions, };
                     }
                 });
             };
@@ -180,6 +167,13 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
 
     eprintln!("iter={}", _iter);
     // bests.iter().for_each(|b| { eprintln!("obstacle={}", b.0.score / 10000000000); });
-    bests
+    bests.into_iter().map(|b| {
+        let mut replay = replay::Replay::new();
+        let actions = b.get_actions();
+        let start_turn = context.plan_start_turn;
+        let last_turn = start_turn + actions.len();
+        replay.init(&context.player, &context.packs[start_turn..last_turn], context.enemy_send_obstacles, &actions);
+        replay
+    }).collect()
 }
 

@@ -9,12 +9,12 @@ pub struct Player {
     pub board: board::Board,
     pub obstacle: i32,
     pub skill_guage: i32,
-    pub decrease_skill_guage: i32,
+    // pub decrease_skill_guage: i32,
 }
 
 impl Player {
     pub fn new(board: board::Board, obstacle: i32, skill_guage: i32) -> Self {
-        Self { board, obstacle, skill_guage, decrease_skill_guage: 0, }
+        Self { board, obstacle, skill_guage, /* decrease_skill_guage: 0, */ }
     }
 
     pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
@@ -48,7 +48,7 @@ impl Player {
             },
         };
         self.obstacle -= result.obstacle;
-        self.decrease_skill_guage += result.skill_guage;
+        // self.decrease_skill_guage += result.skill_guage;
         result
     }
 
