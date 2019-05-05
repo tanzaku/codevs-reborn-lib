@@ -11,7 +11,8 @@ use super::consts::*;
 pub struct Replay {
     expected_results: VecDeque<action::ActionResult>,
     packs: VecDeque<[[u8; 2]; 2]>,
-    actions: VecDeque<u8>,
+    actions: VecDeque<action::Action>,
+    player: player::Player,
 }
 
 impl Replay {
@@ -20,6 +21,7 @@ impl Replay {
             expected_results: VecDeque::new(),
             packs: VecDeque::new(),
             actions: VecDeque::new(),
+            player: Default::default(),
         }
     }
 
@@ -36,8 +38,7 @@ impl Replay {
         let mut illegal_action = false;
         let mut turn = 0;
         let result = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)| {
-            let a = a.into();
-            if a == action::Action::UseSkill && !p.can_use_skill() {
+            if a == &action::Action::UseSkill && !p.can_use_skill() {
                 illegal_action = true;
             }
             let result = p.put(pack, &a);
@@ -48,16 +49,17 @@ impl Replay {
             result
         }).last().unwrap();
 
-        !illegal_action && &result == self.expected_results.back().unwrap()
+        !illegal_action && result == self.get_result()
     }
 
-    pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], enemy_send_obstacles: &[i32], actions: &[u8]) {
+    pub fn init(&mut self, player: &player::Player, packs: &[[[u8; 2]; 2]], enemy_send_obstacles: &[i32], actions: &[action::Action]) {
         self.packs = packs.to_vec().into();
         self.actions = actions.to_vec().into();
+        self.player = player.clone();
         let mut p = player.clone();
         let mut turn = 0;
         self.expected_results = self.actions.iter().zip(self.packs.iter()).map(|(a, pack)| {
-            let result = p.put(pack, &a.into());
+            let result = p.put(pack, &a);
             if turn < enemy_send_obstacles.len() {
                 p.add_obstacles(enemy_send_obstacles[turn]);
             }
@@ -67,9 +69,13 @@ impl Replay {
     }
 
     pub fn replay(&mut self) -> Option<action::Action> {
-        self.packs.pop_front();
+        let pack = self.packs.pop_front();
         self.expected_results.pop_front();
-        self.actions.pop_front().map(|a| a.into())
+        let a = self.actions.pop_front().map(|a| a.into());
+        if a.is_some() {
+            self.player.put(&pack.unwrap(), &a.clone().unwrap());
+        }
+        a
     }
 
     pub fn clear(&mut self) {
@@ -79,11 +85,23 @@ impl Replay {
     }
 
     pub fn get_actions(&self) -> Vec<action::Action> {
-        self.actions.iter().map(|a| a.into()).collect()
+        self.actions.clone().into_iter().collect()
     }
 
     pub fn get_results(&self) -> Vec<action::ActionResult> {
         self.expected_results.clone().into()
+    }
+
+    pub fn get_result(&self) -> action::ActionResult {
+        self.expected_results.back().unwrap_or(&Default::default()).clone()
+    }
+
+    pub fn get_chains(&self) -> u8 {
+        self.get_result().chains
+    }
+
+    pub fn get_obstacle(&self) -> i32 {
+        self.get_result().obstacle
     }
 
     pub fn get_obstacles(&self, player: &player::Player) -> Vec<i32> {
@@ -97,6 +115,10 @@ impl Replay {
             obstacle = std::cmp::max(obstacle, 0);
             result
         }).collect()
+    }
+
+    pub fn get_raw_obstacles(&self) -> Vec<i32> {
+        self.get_results().into_iter().map(|r| r.obstacle).collect()
     }
 
     pub fn get_obstacles_score(&self, player: &player::Player) -> i32 {
