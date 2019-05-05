@@ -165,7 +165,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
         });
     }
 
-    eprintln!("iter={}", _iter);
+    // eprintln!("iter={}", _iter);
     // bests.iter().for_each(|b| { eprintln!("obstacle={}", b.0.score / 10000000000); });
     bests.into_iter().map(|b| {
         let mut replay = replay::Replay::new();

@@ -81,17 +81,14 @@ impl Board {
         (0..W).for_each(|i| heights[i] = self.height(i) as i32);
 
         let vanish_result: Option<(Board, (u8, u8))> = (0..W).map(|x| {
-            let mut l = heights[x] - 1;
-            if x > 0 { l = std::cmp::min(l, heights[x-1] - 1); }
-            if x < W - 1 { l = std::cmp::min(l, heights[x+1] - 1); }
-            l = std::cmp::max(l, 0);
+            let l = 0;
             let h = heights[x] - 1;
 
             let r: Option<(Board, (u8, u8))> = (l..h).map(|y| {
                 if (self.column[x] >> (y*4) & 0x0F) == OBSTACLE {
-                    // return (0, 0, 0);
                     return Default::default();
                 }
+
                 let mut b = self.clone();
                 unsafe {
                     use std::arch::x86_64::*;

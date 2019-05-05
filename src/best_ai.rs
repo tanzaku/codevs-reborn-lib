@@ -112,35 +112,37 @@ impl<'a> BestAi<'a> {
             return self.kill_bommer();
         }
 
+        self.rensa();
         // self.snipe_enemy();
-        self.rensa()
-    }
-
-    fn rensa(&mut self) -> action::Action {
-        if !self.current_best.can_replay(&self.player, &[]) {
-            let max_turn = if self.cur_turn <= 10 { 13 } else { 10 };
-            let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
-            let limit = 60;
-            let enemy_send_obstacles = vec![];
-
-            if self.rest_time_in_milli < 30 * 1000 {
-                // emergency
-                think_time_in_milli = 1000;
-            }
-
-            let states = self.search_rensa(self.player.clone(), max_turn, think_time_in_milli, &enemy_send_obstacles);
-
-            let best = self.get_best(self.player.clone(), limit, &enemy_send_obstacles, states);
-            if let Some(best) = best {
-                self.current_best = best;
-                eprintln!("think done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), self.current_best.get_obstacles(&self.player));
-            }
-        }
 
         if self.current_best.is_empty() {
             Self::resign()
         } else {
             self.current_best.replay().unwrap()
+        }
+    }
+
+    fn rensa(&mut self) {
+        if self.current_best.can_replay(&self.player, &[]) {
+            return;
+        }
+
+        let max_turn = if self.cur_turn <= 10 { 13 } else { 10 };
+        let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
+        let limit = 60;
+        let enemy_send_obstacles = vec![];
+
+        if self.rest_time_in_milli < 30 * 1000 {
+            // emergency
+            think_time_in_milli = 1000;
+        }
+
+        let states = self.search_rensa(self.player.clone(), max_turn, think_time_in_milli, &enemy_send_obstacles);
+
+        let best = self.get_best(self.player.clone(), limit, &enemy_send_obstacles, states);
+        if let Some(best) = best {
+            self.current_best = best;
+            eprintln!("think done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), self.current_best.get_obstacles(&self.player));
         }
     }
 
@@ -194,12 +196,22 @@ impl<'a> BestAi<'a> {
     }
 
     fn snipe_enemy(&mut self) {
-        let moves = self.search_rensa(self.player.clone(), 8, 1000, &[]);
+        if self.current_best.is_empty() || self.current_best.len() >= 8 {
+            return;
+        }
+
+        let moves = self.search_rensa(self.player.clone(), self.current_best.len(), 1000, &[]);
         self.update_best_move(&moves);
         
         let snipe_move = self.search_snipe_move(&moves);
+        if snipe_move.is_empty() {
+            return;
+        }
         let snipe_result = self.snipe(&snipe_move);
-        if snipe_move.get_chains() > snipe_result.get_chains() {
+        // if snipe_move.get_chains() > snipe_result.get_chains() {
+        if snipe_result.len() >= 11 || snipe_result.get_chains() <= 8 {
+            // eprintln!("update snipe: {} {} {} {} {}", self.cur_turn, self.current_best.len(), self.current_best.get_chains(), snipe_move.len(), snipe_move.get_chains());
+            eprintln!("update snipe: {} {} {} {} {}", self.cur_turn, snipe_move.len(), snipe_move.get_chains(), snipe_result.len(), snipe_result.get_result().obstacle);
             self.current_best = snipe_move;
         }
     }
@@ -208,9 +220,11 @@ impl<'a> BestAi<'a> {
         // TODO 相手のフィールドの埋まり具合に合わせて狙いを変える?
         moves.iter().for_each(|m| {
             // 構造体側の比較に任せるべきではない
-            let cur_chains = std::cmp::min(60, self.current_best.get_chains());
-            let chains = std::cmp::min(60, m.get_chains());
-            if cur_chains < chains || cur_chains == chains && self.current_best.len() > m.len() {
+            let cur_chains = std::cmp::min(13, self.current_best.get_chains());
+            let chains = std::cmp::min(13, m.get_chains());
+            // if cur_chains < chains || cur_chains == chains && self.current_best.len() > m.len() {
+            if cur_chains <= chains && self.current_best.len() > m.len() {
+                eprintln!("update_best_move: {} {} {} {} {}", self.cur_turn, self.current_best.len(), self.current_best.get_chains(), m.len(), m.get_chains());
                 self.current_best = m.clone();
             }
         });
@@ -223,20 +237,26 @@ impl<'a> BestAi<'a> {
         moves.iter().for_each(|m| {
             // 構造体側の比較に任せるべきではない
             let chains = m.get_chains();
-            if best_chains <= chains {
+            if chains >= best_chains || chains >= best_chains && self.current_best.len() <= m.len() {
                 return;
             }
-            let second_chains = m.get_chains();
+            if best_chains != chains + 1 {
+                return;
+            }
+            // eprintln!("snipe candidate: {}", chains);
+            let second_chains = second.get_chains();
             if second_chains < chains {
                 second = m.clone();
             }
         });
+        // eprintln!("snipe: {} {} {} {}", self.current_best.len(), best_chains, second.len(), second.get_chains());
         second
     }
 
     fn snipe(&mut self, snipe_move: &replay::Replay) -> replay::Replay {
-        let obstacles = snipe_move.get_raw_obstacles();
-        self.search_rensa(self.enemy.clone(), 8, 1000, &obstacles).into_iter().max_by(|a, b| {
+        // let obstacles = snipe_move.get_raw_obstacles();
+        let obstacles = snipe_move.get_obstacles(&self.player);
+        self.search_rensa(self.enemy.clone(), 13, 2000, &obstacles).into_iter().max_by(|a, b| {
             a.get_chains().cmp(&b.get_chains()).then(b.len().cmp(&a.len()))
         }).unwrap()
     }
