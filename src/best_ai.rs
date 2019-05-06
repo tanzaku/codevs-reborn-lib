@@ -104,6 +104,7 @@ impl<'a> BestAi<'a> {
             return action::Action::UseSkill;
         }
 
+        // for bommer
         if self.cur_turn == 10 && self.enemy.skill_guage >= 30 {
             self.maybe_bommer = true;
         }
@@ -112,7 +113,14 @@ impl<'a> BestAi<'a> {
             return self.kill_bommer();
         }
 
-        self.rensa();
+        if self.current_best.can_replay(&self.player, &[]) {
+            // if self.cur_turn < 5 && self.current_best.get_chains() <= 10 {
+            // if self.cur_turn < 5 && self.current_best.get_chains() <= 13 {
+                // self.rensa_extend();
+            // }
+        } else {
+            self.rensa();
+        }
         // self.snipe_enemy();
 
         if self.current_best.len() == 1 {
@@ -126,11 +134,23 @@ impl<'a> BestAi<'a> {
         }
     }
 
-    fn rensa(&mut self) {
-        if self.current_best.can_replay(&self.player, &[]) {
-            return;
-        }
+    fn rensa_extend(&mut self) {
+        let max_turn =  self.current_best.len() + 2;
+        let think_time_in_milli = 18000;
+        let limit = 60;
+        let enemy_send_obstacles = vec![];
 
+        let states = self.search_rensa(self.player.clone(), max_turn, think_time_in_milli, &enemy_send_obstacles);
+
+        let best = self.get_best(self.player.clone(), limit, &enemy_send_obstacles, &states);
+        if let Some(best) = best {
+            self.current_best = best;
+            let fire = states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
+            eprintln!("extend done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
+        }
+    }
+
+    fn rensa(&mut self) {
         let max_turn = if self.cur_turn <= 10 { 13 } else { 10 };
         let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
         let limit = 60;
