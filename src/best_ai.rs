@@ -155,7 +155,8 @@ impl<'a> BestAi<'a> {
         let (_, _, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_outer_block();
         // eprintln!("anticounter: {} {}", y, self.enemy.board.adjust_height_min(x));
         // unreachable!();
-        y - self.enemy.board.adjust_height_min(x) >= 5
+        let dy = y as i32 - self.enemy.board.adjust_height_min(x) as i32;
+        dy >= 5 && dy <= 8
     }
 
     fn anti_counter(&mut self) {
