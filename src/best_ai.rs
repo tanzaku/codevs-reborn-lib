@@ -165,7 +165,7 @@ impl<'a> BestAi<'a> {
         }
 
         self.current_best.clear();
-        let max_turn = 10;
+        let max_turn = 8;
         let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
         let limit = 200;
         let enemy_send_obstacles = vec![];
