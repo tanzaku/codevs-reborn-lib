@@ -76,23 +76,23 @@ impl Board {
         score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
     }
 
-    pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult) {
+    pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
-        (0..W).for_each(|i| heights[i] = self.height(i) as i32);
+        (0..W).for_each(|i| heights[i] = self.height(i));
         let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
 
-        let vanish_result: Option<(Board, (u8, u8))> = (0..W).map(|x| {
+        let vanish_result = (0..W).map(|x| {
             let l = if num_obstacle_row >= 2 {
-                        let mut l = H as i32;
+                        let mut l = H;
                         if x > 0 { l = std::cmp::min(l, heights[x-1]); }
                         if x + 1 < W { l = std::cmp::min(l, heights[x+1]); }
-                        std::cmp::max(l - 1, 0)
+                        std::cmp::max(l, 1) - 1
                     } else {
                         0
                     };
-            let h = heights[x] - 1;
+            let h = std::cmp::max(heights[x], 1) - 1;
 
-            let r: Option<(Board, (u8, u8))> = (l..h).map(|y| {
+            let r = (l..h).map(|y| {
                 if (self.column[x] >> (y*4) & 0x0F) == OBSTACLE {
                     return Default::default();
                 }
@@ -104,13 +104,13 @@ impl Board {
                 }
                 let changed = 1<<x;
                 let r = b.vanish(changed);
-                (b, r)
+                (b, r, (x, y))
             }).max_by_key(|r| (r.1).0);
             r
         }).filter(|r| r.is_some()).map(|r| r.unwrap()).max_by_key(|r| (r.1).0);
 
-        let (board, vanish_result) = vanish_result.unwrap_or(Default::default());
-        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1))
+        let (board, vanish_result, p) = vanish_result.unwrap_or(Default::default());
+        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
@@ -317,6 +317,20 @@ impl Board {
 
     pub fn is_dead(&self) -> bool {
         self.dead
+    }
+
+    pub fn adjust_height_min(&self, x: usize) -> usize {
+        let mut h = H;
+        if x > 0 { h = std::cmp::min(h, self.height(x-1)); }
+        if x < W - 1 { h = std::cmp::min(h, self.height(x+1)); }
+        h
+    }
+
+    pub fn adjust_height_max(&self, x: usize) -> usize {
+        let mut h = 0;
+        if x > 0 { h = std::cmp::max(h, self.height(x-1)); }
+        if x < W - 1 { h = std::cmp::max(h, self.height(x+1)); }
+        h
     }
 
     pub fn max_height(&self) -> usize {
