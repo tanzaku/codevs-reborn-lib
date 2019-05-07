@@ -182,7 +182,7 @@ impl<'a> BestAi<'a> {
 
         let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
         if let Some(enemy_counter_best) = self.get_best(self.enemy.clone(), 200, &[my_attack.1.obstacle], &enemy_counter_states) {
-            if enemy_counter_best.get_chains() >= my_attack.1.chains + 2 {
+            if enemy_counter_best.get_chains() >= my_attack.1.chains + 1 {
             // if enemy_counter_best.get_chains() >= my_attack.1.chains {
                 self.rensa_extend(8, 13000);
             }
