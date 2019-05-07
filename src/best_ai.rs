@@ -114,8 +114,8 @@ impl<'a> BestAi<'a> {
         }
 
         if self.rensa() {
-        } else if self.anti_counter_clever() {
-        } else if self.should_fire() {
+        } else if self.do_counter() {
+        } else if self.do_anti_counter() {
         }
         // self.snipe_enemy();
 
@@ -172,7 +172,7 @@ impl<'a> BestAi<'a> {
         true
     }
 
-    fn anti_counter_clever(&mut self) -> bool {
+    fn do_counter(&mut self) -> bool {
         let enemy_attack = self.fire(&self.enemy);
         if enemy_attack.1.chains < 11 {
             return false
@@ -186,7 +186,7 @@ impl<'a> BestAi<'a> {
         true
     }
 
-    fn should_fire(&mut self) -> bool {
+    fn do_anti_counter(&mut self) -> bool {
         if self.current_best.len() != 1 {
             return false;
         }
