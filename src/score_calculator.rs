@@ -41,7 +41,7 @@ impl ScoreCalculator {
         }
     }
 
-    pub fn calc_chain_result(chains: u8, fire_height: u8) -> action::ActionResult {
+    pub fn calc_chain_result(chains: u8, fire_height: i8) -> action::ActionResult {
         SCORE_CALCULATOR.with(|s| {
             let obstacle = s.chian_obstacle[chains as usize];
             let skill_guage = Self::decrease_skill_guage(chains);
@@ -49,7 +49,7 @@ impl ScoreCalculator {
         })
     }
 
-    pub fn calc_bomb_result(bomb: u8, chains: u8, fire_height: u8) -> action::ActionResult {
+    pub fn calc_bomb_result(bomb: u8, chains: u8, fire_height: i8) -> action::ActionResult {
         SCORE_CALCULATOR.with(|s| {
             let obstacle = s.bomb_obstacle[bomb as usize] + s.chian_obstacle[chains as usize];
             let skill_guage = Self::decrease_skill_guage(chains);

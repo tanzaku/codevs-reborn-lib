@@ -177,8 +177,10 @@ impl<'a> BestAi<'a> {
     fn anti_counter_clever(&mut self) {
         let my_attack = self.fire(&self.player.clone());
     // fn fire(&mut self, player: &player::Player) -> (action::Action, action::ActionResult) {
-        // let enemy_fire = self.search_rensa(self.enemy.clone(), 5, 1000, &[]]);
-        // if enemy_fire.
+        // let enemy_fire = self.fire(self.enemy.clone()]);
+        // if enemy_fire.1.chains >= 11 {
+        //     let self_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
+        // }
 
         let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
         if let Some(enemy_counter_best) = self.get_best(self.enemy.clone(), 200, &[my_attack.1.obstacle], &enemy_counter_states) {
@@ -260,15 +262,17 @@ impl<'a> BestAi<'a> {
 
         rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, _player, feature| {
             let obstacle_score = std::cmp::min(result.obstacle, 200);
-            let feature_score = feature.keima * 50
+            let feature_score =
+                                (result.fire_height as i32) * 1000
+                                + feature.keima * 50
                                 + feature.tate * 40
                                 + feature.keima2 * 1
                                 + feature.tate2 * 1
-                                + feature.num_block * 100
+                                + feature.num_block * 2000
                                 // + feature.num_block * 10000
                                 // + feature.num_block * 100000
                                 ;
-            obstacle_score as i64 * 1000 + feature_score as i64
+            obstacle_score as i64 * 1000000 + feature_score as i64
         })
     }
 

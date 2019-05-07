@@ -112,7 +112,8 @@ impl Board {
         }).filter(|r| r.is_some()).map(|r| r.unwrap()).max_by_key(|r| (r.1).0);
 
         let (board, vanish_result, p) = vanish_result.unwrap_or(Default::default());
-        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
+        // (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
+        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
@@ -259,11 +260,10 @@ impl Board {
         changed
     }
 
-    fn vanish(&mut self, changed: usize) -> (u8, u8) {
+    fn vanish(&mut self, changed: usize) -> (u8, i8) {
         let mut rensa = 0;
         let mut changed = changed;
-        let mut height = 0;
-        let mut remove_hash = 0;
+        let mut height = 111;
 
         loop {
             let c = changed | changed >> 1;
@@ -289,17 +289,23 @@ impl Board {
                 let r = Self::calc_remove(self.column[i], self.column[i+1]>>4);
                 remove_mask[i+0] |= r;
                 remove_mask[i+1] |= r << 4;
-
-                remove_hash = remove_hash * 31 + remove_mask[i+0];
             }
             let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<4);
             remove_mask[W-1] |= r;
             remove_mask[W-1] |= r >> 4;
-            remove_hash = remove_hash * 31 + remove_mask[W-1];
 
             // eprintln!("{:?}", self);
-            if height == 0 {
-                height = Self::height_by_val(*remove_mask.iter().max().unwrap());
+            if height == 111 {
+                let mut not_changed_max = 0;
+                let mut changed_max = 0;
+                remove_mask.iter().enumerate().for_each(|(x,m)| {
+                    if (changed >> x & 1) == 0 {
+                        not_changed_max = std::cmp::max(not_changed_max, Self::height_by_val(*m));
+                    } else {
+                        changed_max = std::cmp::max(changed_max, Self::height_by_val(*m));
+                    }
+                });
+                height = (not_changed_max as i8) - (changed_max as i8);
             }
             changed = self.fall_by_mask(&remove_mask);
             if changed == 0 {
@@ -308,7 +314,6 @@ impl Board {
             rensa += 1;
         }
         (rensa, height)
-        // (rensa, height, 0)
     }
 
     pub fn fall_obstacle(&mut self) {
