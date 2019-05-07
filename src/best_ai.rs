@@ -113,16 +113,9 @@ impl<'a> BestAi<'a> {
             return self.kill_bommer();
         }
 
-        if self.current_best.can_replay(&self.player, &[]) {
-            // if self.cur_turn < 5 && self.current_best.get_chains() <= 10 {
-            // if self.cur_turn < 5 && self.current_best.get_chains() <= 13 {
-                // self.rensa_extend();
-            // }
-            if self.current_best.len() == 1 {
-                self.anti_counter_clever();
-            }
-        } else {
-            self.rensa();
+        if self.rensa() {
+        } else if self.anti_counter_clever() {
+        } else if self.should_fire() {
         }
         // self.snipe_enemy();
 
@@ -153,7 +146,11 @@ impl<'a> BestAi<'a> {
         }
     }
 
-    fn rensa(&mut self) {
+    fn rensa(&mut self) -> bool {
+        if self.current_best.can_replay(&self.player, &[]) {
+            return false;
+        }
+
         let max_turn = if self.cur_turn <= 10 { 13 } else { 10 };
         let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
         let limit = 60;
@@ -172,16 +169,29 @@ impl<'a> BestAi<'a> {
             let fire = states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
             eprintln!("think done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
         }
+        true
     }
 
-    fn anti_counter_clever(&mut self) {
-        let my_attack = self.fire(&self.player.clone());
-    // fn fire(&mut self, player: &player::Player) -> (action::Action, action::ActionResult) {
-        // let enemy_fire = self.fire(self.enemy.clone()]);
-        // if enemy_fire.1.chains >= 11 {
-        //     let self_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
-        // }
+    fn anti_counter_clever(&mut self) -> bool {
+        let enemy_attack = self.fire(&self.enemy);
+        if enemy_attack.1.chains < 11 {
+            return false
+        }
+        let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack.1.obstacle]);
+        if let Some(best_counter) = self.get_best(self.player.clone(), enemy_attack.1.obstacle * 3 / 2, &[enemy_attack.1.obstacle], &self_counter_states) {
+            self.current_best = best_counter;
+            let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
+            eprintln!("counter done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
+        }
+        true
+    }
 
+    fn should_fire(&mut self) -> bool {
+        if self.current_best.len() != 1 {
+            return false;
+        }
+
+        let my_attack = self.fire(&self.player);
         let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
         if let Some(enemy_counter_best) = self.get_best(self.enemy.clone(), 200, &[my_attack.1.obstacle], &enemy_counter_states) {
             if enemy_counter_best.get_chains() >= my_attack.1.chains + 1 {
@@ -189,7 +199,29 @@ impl<'a> BestAi<'a> {
                 self.rensa_extend(8, 13000);
             }
         }
+        true
     }
+
+    // fn anti_counter_clever(&mut self) {
+    //     let enemy_attack = self.fire(&self.enemy);
+    //     if enemy_attack.1.chains >= 11 {
+    //         let self_counter_states = self.search_rensa(self.player.clone(), 13, 18000, &[enemy_attack.1.obstacle]);
+    //         if let Some(best_counter) = self.get_best(self.player.clone(), enemy_attack.1.obstacle * 3 / 2, &[enemy_attack.1.obstacle], &self_counter_states) {
+    //             self.current_best = best_counter;
+    //             let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
+    //             eprintln!("counter done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
+    //         }
+    //     }
+
+    //     // let my_attack = self.fire(&self.player);
+    //     // let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
+    //     // if let Some(enemy_counter_best) = self.get_best(self.enemy.clone(), 200, &[my_attack.1.obstacle], &enemy_counter_states) {
+    //     //     if enemy_counter_best.get_chains() >= my_attack.1.chains + 1 {
+    //     //     // if enemy_counter_best.get_chains() >= my_attack.1.chains {
+    //     //         self.rensa_extend(8, 13000);
+    //     //     }
+    //     // }
+    // }
 
     fn is_enemy_tactics_counter(&self) -> bool {
         let (_, _, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_outer_block();
@@ -399,7 +431,7 @@ impl<'a> BestAi<'a> {
     //     }
     // }
 
-    fn fire(&mut self, player: &player::Player) -> (action::Action, action::ActionResult) {
+    fn fire(&self, player: &player::Player) -> (action::Action, action::ActionResult) {
         let actions = action::Action::all_actions();
         let pack = self.packs[self.cur_turn];
         actions.par_iter().map(|a| {
