@@ -118,6 +118,9 @@ impl<'a> BestAi<'a> {
             // if self.cur_turn < 5 && self.current_best.get_chains() <= 13 {
                 // self.rensa_extend();
             // }
+            if self.current_best.len() == 1 {
+                self.anti_counter_clever();
+            }
         } else {
             self.rensa();
         }
@@ -127,9 +130,6 @@ impl<'a> BestAi<'a> {
         //     self.anti_counter();
         // }
 
-        if self.current_best.len() == 1 {
-            self.anti_counter_clever();
-        }
 
         if self.current_best.is_empty() {
             Self::resign()
