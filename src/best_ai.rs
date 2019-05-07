@@ -173,6 +173,9 @@ impl<'a> BestAi<'a> {
     }
 
     fn do_counter(&mut self) -> bool {
+        if self.rest_time_in_milli < 30 * 1000 {
+            return false;
+        }
         let enemy_attack = self.fire(&self.enemy);
         if enemy_attack.1.chains < 11 {
             return false
@@ -187,6 +190,9 @@ impl<'a> BestAi<'a> {
     }
 
     fn do_anti_counter(&mut self) -> bool {
+        if self.rest_time_in_milli < 30 * 1000 {
+            return false;
+        }
         if self.current_best.len() != 1 {
             return false;
         }
