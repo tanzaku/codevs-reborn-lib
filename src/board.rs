@@ -76,23 +76,25 @@ impl Board {
         score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
     }
 
-    pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult) {
+    pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
-        (0..W).for_each(|i| heights[i] = self.height(i) as i32);
-        let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
+        let mut highest_obstacle_row = [0; W];
+        (0..W).for_each(|i| {
+            highest_obstacle_row[i] = ((64 - Self::calc_obstacle_mask(self.column[i]).leading_zeros()) / 4) as usize;
+            heights[i] = self.height(i);
+        });
+        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
 
-        let vanish_result: Option<(Board, (u8, u8))> = (0..W).map(|x| {
-            let l = if num_obstacle_row >= 2 {
-                        let mut l = H as i32;
-                        if x > 0 { l = std::cmp::min(l, heights[x-1]); }
-                        if x + 1 < W { l = std::cmp::min(l, heights[x+1]); }
-                        std::cmp::max(l - 1, 0)
-                    } else {
-                        0
-                    };
-            let h = heights[x] - 1;
+        let vanish_result = (0..W).map(|x| {
+            let l = {
+                let mut l = H;
+                if x > 0 { l = std::cmp::min(l, highest_obstacle_row[x-1]); }
+                if x + 1 < W { l = std::cmp::min(l, highest_obstacle_row[x+1]); }
+                std::cmp::max(l, 1) - 1
+            };
+            let h = std::cmp::max(heights[x], 1) - 1;
 
-            let r: Option<(Board, (u8, u8))> = (l..h).map(|y| {
+            let r = (l..h).map(|y| {
                 if (self.column[x] >> (y*4) & 0x0F) == OBSTACLE {
                     return Default::default();
                 }
@@ -104,13 +106,14 @@ impl Board {
                 }
                 let changed = 1<<x;
                 let r = b.vanish(changed);
-                (b, r)
+                (b, r, (x, y))
             }).max_by_key(|r| (r.1).0);
             r
         }).filter(|r| r.is_some()).map(|r| r.unwrap()).max_by_key(|r| (r.1).0);
 
-        let (board, vanish_result) = vanish_result.unwrap_or(Default::default());
-        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1))
+        let (board, vanish_result, p) = vanish_result.unwrap_or(Default::default());
+        // (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
+        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
@@ -257,11 +260,10 @@ impl Board {
         changed
     }
 
-    fn vanish(&mut self, changed: usize) -> (u8, u8) {
+    fn vanish(&mut self, changed: usize) -> (u8, i8) {
         let mut rensa = 0;
         let mut changed = changed;
-        let mut height = 0;
-        let mut remove_hash = 0;
+        let mut height = 111;
 
         loop {
             let c = changed | changed >> 1;
@@ -287,17 +289,23 @@ impl Board {
                 let r = Self::calc_remove(self.column[i], self.column[i+1]>>4);
                 remove_mask[i+0] |= r;
                 remove_mask[i+1] |= r << 4;
-
-                remove_hash = remove_hash * 31 + remove_mask[i+0];
             }
             let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<4);
             remove_mask[W-1] |= r;
             remove_mask[W-1] |= r >> 4;
-            remove_hash = remove_hash * 31 + remove_mask[W-1];
 
             // eprintln!("{:?}", self);
-            if height == 0 {
-                height = Self::height_by_val(*remove_mask.iter().max().unwrap());
+            if height == 111 {
+                let mut not_changed_max = 0;
+                let mut changed_max = 0;
+                remove_mask.iter().enumerate().for_each(|(x,m)| {
+                    if (changed >> x & 1) == 0 {
+                        not_changed_max = std::cmp::max(not_changed_max, Self::height_by_val(*m));
+                    } else {
+                        changed_max = std::cmp::max(changed_max, Self::height_by_val(*m));
+                    }
+                });
+                height = (not_changed_max as i8) - (changed_max as i8);
             }
             changed = self.fall_by_mask(&remove_mask);
             if changed == 0 {
@@ -306,7 +314,6 @@ impl Board {
             rensa += 1;
         }
         (rensa, height)
-        // (rensa, height, 0)
     }
 
     pub fn fall_obstacle(&mut self) {
@@ -317,6 +324,20 @@ impl Board {
 
     pub fn is_dead(&self) -> bool {
         self.dead
+    }
+
+    pub fn adjust_height_min(&self, x: usize) -> usize {
+        let mut h = H;
+        if x > 0 { h = std::cmp::min(h, self.height(x-1)); }
+        if x < W - 1 { h = std::cmp::min(h, self.height(x+1)); }
+        h
+    }
+
+    pub fn adjust_height_max(&self, x: usize) -> usize {
+        let mut h = 0;
+        if x > 0 { h = std::cmp::max(h, self.height(x-1)); }
+        if x < W - 1 { h = std::cmp::max(h, self.height(x+1)); }
+        h
     }
 
     pub fn max_height(&self) -> usize {
