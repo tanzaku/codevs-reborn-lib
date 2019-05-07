@@ -78,18 +78,20 @@ impl Board {
 
     pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
-        (0..W).for_each(|i| heights[i] = self.height(i));
-        let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
+        let mut highest_obstacle_row = [0; W];
+        (0..W).for_each(|i| {
+            highest_obstacle_row[i] = ((64 - Self::calc_obstacle_mask(self.column[i]).leading_zeros()) / 4) as usize;
+            heights[i] = self.height(i);
+        });
+        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
 
         let vanish_result = (0..W).map(|x| {
-            let l = if num_obstacle_row >= 2 {
-                        let mut l = H;
-                        if x > 0 { l = std::cmp::min(l, heights[x-1]); }
-                        if x + 1 < W { l = std::cmp::min(l, heights[x+1]); }
-                        std::cmp::max(l, 1) - 1
-                    } else {
-                        0
-                    };
+            let l = {
+                let mut l = H;
+                if x > 0 { l = std::cmp::min(l, highest_obstacle_row[x-1]); }
+                if x + 1 < W { l = std::cmp::min(l, highest_obstacle_row[x+1]); }
+                std::cmp::max(l, 1) - 1
+            };
             let h = std::cmp::max(heights[x], 1) - 1;
 
             let r = (l..h).map(|y| {
