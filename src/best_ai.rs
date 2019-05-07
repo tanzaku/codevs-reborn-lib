@@ -123,9 +123,9 @@ impl<'a> BestAi<'a> {
         }
         // self.snipe_enemy();
 
-        if self.current_best.len() == 1 {
-            self.anti_counter();
-        }
+        // if self.current_best.len() == 1 {
+        //     self.anti_counter();
+        // }
 
         if self.current_best.len() == 1 {
             self.anti_counter_clever();
