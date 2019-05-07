@@ -127,6 +127,10 @@ impl<'a> BestAi<'a> {
             self.anti_counter();
         }
 
+        if self.current_best.len() == 1 {
+            self.anti_counter_clever();
+        }
+
         if self.current_best.is_empty() {
             Self::resign()
         } else {
@@ -134,10 +138,9 @@ impl<'a> BestAi<'a> {
         }
     }
 
-    fn rensa_extend(&mut self) {
-        let max_turn =  self.current_best.len() + 2;
-        let think_time_in_milli = 18000;
-        let limit = 60;
+    fn rensa_extend(&mut self, max_turn: usize, think_time_in_milli: u64) {
+        // TODO 200 limit is too low?
+        let limit = 200;
         let enemy_send_obstacles = vec![];
 
         let states = self.search_rensa(self.player.clone(), max_turn, think_time_in_milli, &enemy_send_obstacles);
@@ -168,6 +171,21 @@ impl<'a> BestAi<'a> {
             self.current_best = best;
             let fire = states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
             eprintln!("think done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
+        }
+    }
+
+    fn anti_counter_clever(&mut self) {
+        let my_attack = self.fire(&self.player.clone());
+    // fn fire(&mut self, player: &player::Player) -> (action::Action, action::ActionResult) {
+        // let enemy_fire = self.search_rensa(self.enemy.clone(), 5, 1000, &[]]);
+        // if enemy_fire.
+
+        let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
+        if let Some(enemy_counter_best) = self.get_best(self.enemy.clone(), 200, &[my_attack.1.obstacle], &enemy_counter_states) {
+            if enemy_counter_best.get_chains() >= my_attack.1.chains + 2 {
+            // if enemy_counter_best.get_chains() >= my_attack.1.chains {
+                self.rensa_extend(8, 13000);
+            }
         }
     }
 
@@ -377,17 +395,17 @@ impl<'a> BestAi<'a> {
     //     }
     // }
 
-    fn fire(&mut self, player: &player::Player) -> (action::Action, i32) {
+    fn fire(&mut self, player: &player::Player) -> (action::Action, action::ActionResult) {
         let actions = action::Action::all_actions();
         let pack = self.packs[self.cur_turn];
         actions.par_iter().map(|a| {
             if &action::Action::UseSkill == a && !player.can_use_skill() {
-                return (action::Action::UseSkill, 0);
+                return (action::Action::UseSkill, Default::default());
             }
 
             let mut player = player.clone();
-            (a.clone(), player.put(&pack, a).obstacle)
-        }).max_by_key(|x| x.1).unwrap()
+            (a.clone(), player.put(&pack, a))
+        }).max_by_key(|x| x.1.obstacle).unwrap()
     }
 
     // fn search_max_obstacles(&mut self, player: &player::Player, think_time_in_milli: u64, fall_obstacles: Vec<i32>) -> Option<replay::Replay> {
