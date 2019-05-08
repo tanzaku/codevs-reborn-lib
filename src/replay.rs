@@ -125,6 +125,10 @@ impl Replay {
         self.get_results().into_iter().map(|r| r.obstacle).sum::<i32>() - player.obstacle
     }
 
+    pub fn get_decreased_skill_guage(&self) -> i32 {
+        self.get_results().into_iter().map(|r| r.skill_guage).sum::<i32>()
+    }
+
     pub fn len(&self) -> usize {
         self.actions.len()
     }
