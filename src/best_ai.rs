@@ -316,12 +316,13 @@ impl<'a> BestAi<'a> {
             packs: &self.packs,
         };
 
-        rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, _player, feature| {
+        rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, feature| {
             let obstacle_score = std::cmp::min(result.obstacle, 200);
+            let max_height = (std::cmp::max(H - 2, player.board.max_height()) - (H - 2)) as i32;
             let feature_score =
                                 (result.fire_height as i32) * 1000
-                                + 
-                                feature.keima * 50
+                                - max_height * 10000
+                                + feature.keima * 50
                                 + feature.tate * 40
                                 + feature.keima2 * 1
                                 + feature.tate2 * 1
