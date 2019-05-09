@@ -186,8 +186,9 @@ impl<'a> BestAi<'a> {
             return false;
         }
         let enemy_attack = *self.best_fire_enemy_history.back().unwrap();
-        let max_enemy_attack = *self.best_fire_enemy_history.iter().max().unwrap();
-        if enemy_attack < 40 || max_enemy_attack >= enemy_attack {
+        let n = self.best_fire_enemy_history.len();
+        let max_enemy_attack = *self.best_fire_enemy_history.iter().take(n - 1).max().unwrap_or(&0);
+        if enemy_attack < 30 || max_enemy_attack >= enemy_attack {
             return false
         }
         let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack]);
@@ -210,11 +211,11 @@ impl<'a> BestAi<'a> {
         }
 
         let my_attack = self.fire(&self.player);
-        let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.2]);
+        let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 9000, &[my_attack.2]);
         if let Some(enemy_counter_best) = self.get_best(self.enemy.clone(), 200, &[my_attack.2], &enemy_counter_states) {
             if enemy_counter_best.get_chains() >= my_attack.1.chains + 1 {
             // if enemy_counter_best.get_chains() >= my_attack.1.chains {
-                self.rensa_extend(8, 13000);
+                self.rensa_extend(8, 9000);
             }
         }
         true
