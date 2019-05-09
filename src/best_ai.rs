@@ -123,8 +123,8 @@ impl<'a> BestAi<'a> {
 
         if false {
         } else if self.do_counter() {
-        } else if self.do_anti_counter() {
         } else if self.rensa() {
+        } else if self.do_anti_counter() {
         }
         // self.snipe_enemy();
 
