@@ -117,7 +117,7 @@ impl<'a> BestAi<'a> {
         }
 
         if true {
-        } if self.kill_bommer_emergency() {
+        // } if self.kill_bommer_emergency() {
         } else if self.rensa() {
         } else if self.do_counter() {
         } else if self.do_anti_counter() {
