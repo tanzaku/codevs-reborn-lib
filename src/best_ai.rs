@@ -3,6 +3,7 @@
 use std::str::FromStr;
 use std::io::Read;
 use std::io::StdinLock;
+use std::collections::VecDeque;
 
 use rayon::prelude::*;
 
@@ -26,6 +27,7 @@ pub struct BestAi<'a> {
     rand: rand::XorShiftL,
 
     maybe_bommer: bool,
+    best_fire_enemy_history: VecDeque<i32>,
     current_best: replay::Replay,
 }
 
@@ -42,6 +44,7 @@ impl<'a> BestAi<'a> {
             rand: rand::XorShiftL::new(),
 
             maybe_bommer: false,
+            best_fire_enemy_history: VecDeque::new(),
             current_best: replay::Replay::new(),
         }
     }
@@ -113,6 +116,11 @@ impl<'a> BestAi<'a> {
             return self.kill_bommer();
         }
 
+        self.best_fire_enemy_history.push_back(self.fire(&self.enemy).2);
+        if self.best_fire_enemy_history.len() > 5 {
+            self.best_fire_enemy_history.pop_front();
+        }
+
         if false {
         } else if self.do_counter() {
         } else if self.do_anti_counter() {
@@ -177,15 +185,18 @@ impl<'a> BestAi<'a> {
         if self.rest_time_in_milli < 30 * 1000 {
             return false;
         }
-        let enemy_attack = self.fire(&self.enemy);
-        if enemy_attack.2 < 40 {
+        let enemy_attack = *self.best_fire_enemy_history.back().unwrap();
+        let max_enemy_attack = *self.best_fire_enemy_history.iter().max().unwrap();
+        if enemy_attack < 40 || max_enemy_attack >= enemy_attack {
             return false
         }
-        let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack.2]);
-        if let Some(best_counter) = self.get_best(self.player.clone(), enemy_attack.2 * 3 / 2, &[enemy_attack.2], &self_counter_states) {
-            self.current_best = best_counter;
-            let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
-            eprintln!("counter done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
+        let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack]);
+        if let Some(best_counter) = self.get_best(self.player.clone(), enemy_attack * 3 / 2, &[enemy_attack], &self_counter_states) {
+            if best_counter.get_obstacle() < enemy_attack {
+                self.current_best = best_counter;
+                let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
+                eprintln!("counter done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
+            }
         }
         true
     }
