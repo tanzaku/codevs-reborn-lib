@@ -113,9 +113,10 @@ impl<'a> BestAi<'a> {
             return self.kill_bommer();
         }
 
-        if self.rensa() {
+        if false {
         } else if self.do_counter() {
         } else if self.do_anti_counter() {
+        } else if self.rensa() {
         }
         // self.snipe_enemy();
 
