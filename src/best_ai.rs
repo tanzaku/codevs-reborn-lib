@@ -199,6 +199,9 @@ impl<'a> BestAi<'a> {
                 self.current_best = best_counter;
                 let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
                 eprintln!("counter done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
+            // } else {
+            //     let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
+            //     eprintln!("not counter done: {} {} {} {:?}", self.cur_turn, enemy_attack, best_counter.get_actions().len(), fire);
             }
         }
         true
@@ -316,8 +319,9 @@ impl<'a> BestAi<'a> {
         rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, _player, feature| {
             let obstacle_score = std::cmp::min(result.obstacle, 200);
             let feature_score =
-                                (result.fire_height as i32) * 1000
-                                + feature.keima * 50
+                                // (result.fire_height as i32) * 1000
+                                // + 
+                                feature.keima * 50
                                 + feature.tate * 40
                                 + feature.keima2 * 1
                                 + feature.tate2 * 1
@@ -462,7 +466,7 @@ impl<'a> BestAi<'a> {
 
             let mut player = player.clone();
             let result = player.put(&pack, a);
-            (a.clone(), result.clone(), result.obstacle - player.obstacle)
+            (a.clone(), result.clone(), -player.obstacle)
         }).max_by_key(|x| x.1.obstacle).unwrap()
     }
 
