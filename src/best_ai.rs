@@ -181,7 +181,7 @@ impl<'a> BestAi<'a> {
             return false;
         }
         let enemy_attack = self.fire(&self.enemy);
-        if enemy_attack.1.chains < 11 {
+        if enemy_attack.1.chains <= 11 {
             return false
         }
         let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack.1.obstacle]);
@@ -198,6 +198,9 @@ impl<'a> BestAi<'a> {
             return false;
         }
         if self.current_best.len() != 1 {
+            return false;
+        }
+        if self.cur_turn > 15 {
             return false;
         }
 
