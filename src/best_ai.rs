@@ -188,7 +188,8 @@ impl<'a> BestAi<'a> {
         let enemy_attack = *self.best_fire_enemy_history.back().unwrap();
         let n = self.best_fire_enemy_history.len();
         let max_enemy_attack = *self.best_fire_enemy_history.iter().take(n - 1).max().unwrap_or(&0);
-        if enemy_attack < 30 || max_enemy_attack >= enemy_attack {
+        let threshold = if self.cur_turn < 15 { 40 } else { 30 };
+        if enemy_attack < threshold || max_enemy_attack >= enemy_attack {
             return false
         }
         let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack]);
