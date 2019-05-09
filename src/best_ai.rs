@@ -193,7 +193,7 @@ impl<'a> BestAi<'a> {
         }
         let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack]);
         if let Some(best_counter) = self.get_best(self.player.clone(), enemy_attack * 3 / 2, &[enemy_attack], &self_counter_states) {
-            if best_counter.get_obstacle() < enemy_attack {
+            if best_counter.get_obstacle() >= enemy_attack {
                 self.current_best = best_counter;
                 let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
                 eprintln!("counter done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
@@ -211,11 +211,11 @@ impl<'a> BestAi<'a> {
         }
 
         let my_attack = self.fire(&self.player);
-        let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 9000, &[my_attack.2]);
+        let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.2]);
         if let Some(enemy_counter_best) = self.get_best(self.enemy.clone(), 200, &[my_attack.2], &enemy_counter_states) {
             if enemy_counter_best.get_chains() >= my_attack.1.chains + 1 {
             // if enemy_counter_best.get_chains() >= my_attack.1.chains {
-                self.rensa_extend(8, 9000);
+                self.rensa_extend(8, 13000);
             }
         }
         true
