@@ -319,8 +319,8 @@ impl<'a> BestAi<'a> {
         rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, _player, feature| {
             let obstacle_score = std::cmp::min(result.obstacle, 200);
             let feature_score =
-                                // (result.fire_height as i32) * 1000
-                                // + 
+                                (result.fire_height as i32) * 1000
+                                + 
                                 feature.keima * 50
                                 + feature.tate * 40
                                 + feature.keima2 * 1
