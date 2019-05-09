@@ -200,9 +200,9 @@ impl<'a> BestAi<'a> {
         if self.current_best.len() != 1 {
             return false;
         }
-        if self.cur_turn > 15 {
-            return false;
-        }
+        // if self.cur_turn > 15 {
+        //     return false;
+        // }
 
         let my_attack = self.fire(&self.player);
         let enemy_counter_states = self.search_rensa(self.enemy.clone(), 7, 5000, &[my_attack.1.obstacle]);
