@@ -194,7 +194,7 @@ impl<'a> BestAi<'a> {
         }
         let self_counter_states = self.search_rensa(self.player.clone(), 10, 15000, &[enemy_attack]);
         if let Some(best_counter) = self.get_best(self.player.clone(), enemy_attack * 3 / 2, &[enemy_attack], &self_counter_states) {
-            if best_counter.get_obstacle() >= enemy_attack {
+            if self.cur_turn > 15 || best_counter.get_obstacle() >= enemy_attack {
                 self.current_best = best_counter;
                 let fire = self_counter_states.iter().map(|r| r.get_chains()).collect::<Vec<_>>();
                 eprintln!("counter done: {} {} {:?}", self.cur_turn, self.current_best.get_actions().len(), fire);
