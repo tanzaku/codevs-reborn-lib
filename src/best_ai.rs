@@ -26,6 +26,7 @@ pub struct BestAi<'a> {
     enemy: player::Player,
     rand: rand::XorShiftL,
 
+    found_explicit_counter_turn: usize,
     maybe_bommer: bool,
     best_fire_enemy_history: VecDeque<i32>,
     current_best: replay::Replay,
@@ -43,6 +44,7 @@ impl<'a> BestAi<'a> {
             enemy: player::Player::new(board::Board::new(), 0, 0),
             rand: rand::XorShiftL::new(),
 
+            found_explicit_counter_turn: 0,
             maybe_bommer: false,
             best_fire_enemy_history: VecDeque::new(),
             current_best: replay::Replay::new(),
@@ -256,10 +258,11 @@ impl<'a> BestAi<'a> {
     }
 
     fn anti_counter_kera(&mut self) -> bool {
-        if self.cur_turn > 15 || !self.is_enemy_tactics_counter() {
+        if self.found_explicit_counter_turn - self.cur_turn < 3 || self.cur_turn > 15 || !self.is_enemy_tactics_counter() {
             return false;
         }
 
+        self.found_explicit_counter_turn = self.cur_turn;
         self.current_best.clear();
         let max_turn = 8;
         let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
