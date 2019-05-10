@@ -249,23 +249,27 @@ impl<'a> BestAi<'a> {
     //     // }
     // }
 
-    fn is_enemy_tactics_counter(&self) -> bool {
-        let (_, _, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_outer_block();
+    fn enemy_counter_result(&self) -> (bool, action::ActionResult) {
+        let (_, result, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_outer_block();
         // eprintln!("anticounter: {} {}", y, self.enemy.board.adjust_height_min(x));
         // unreachable!();
         let dy = y as i32 - self.enemy.board.adjust_height_min(x) as i32;
-        dy >= 5 && dy <= 8
+        (dy >= 5 && dy <= 8, result)
     }
 
     fn anti_counter_kera(&mut self) -> bool {
-        if self.found_explicit_counter_turn - self.cur_turn < 3 || self.cur_turn > 15 || !self.is_enemy_tactics_counter() {
+        let (is_counter, result) = self.enemy_counter_result();
+        if !is_counter || self.current_best.get_chains() >= result.chains + 2 {
+            return false;
+        }
+        if self.rest_time_in_milli < 30 * 1000 {
             return false;
         }
 
         self.found_explicit_counter_turn = self.cur_turn;
         self.current_best.clear();
         let max_turn = 8;
-        let mut think_time_in_milli = if self.cur_turn <= 10 { 18000 } else { 15000 };
+        let mut think_time_in_milli = 15000;
         let limit = 10000;
         let enemy_send_obstacles = vec![];
 
@@ -334,71 +338,71 @@ impl<'a> BestAi<'a> {
         })
     }
 
-    fn snipe_enemy(&mut self) {
-        if self.current_best.is_empty() || self.current_best.len() >= 8 {
-            return;
-        }
+    // fn snipe_enemy(&mut self) {
+    //     if self.current_best.is_empty() || self.current_best.len() >= 8 {
+    //         return;
+    //     }
 
-        let moves = self.search_rensa(self.player.clone(), self.current_best.len(), 1000, &[]);
-        self.update_best_move(&moves);
+    //     let moves = self.search_rensa(self.player.clone(), self.current_best.len(), 1000, &[]);
+    //     self.update_best_move(&moves);
         
-        let snipe_move = self.search_snipe_move(&moves);
-        if snipe_move.is_empty() {
-            return;
-        }
-        let snipe_result = self.snipe(&snipe_move);
-        // if snipe_move.get_chains() > snipe_result.get_chains() {
-        if snipe_result.len() >= 11 || snipe_result.get_chains() <= 8 {
-            // eprintln!("update snipe: {} {} {} {} {}", self.cur_turn, self.current_best.len(), self.current_best.get_chains(), snipe_move.len(), snipe_move.get_chains());
-            eprintln!("update snipe: {} {} {} {} {}", self.cur_turn, snipe_move.len(), snipe_move.get_chains(), snipe_result.len(), snipe_result.get_result().obstacle);
-            self.current_best = snipe_move;
-        }
-    }
+    //     let snipe_move = self.search_snipe_move(&moves);
+    //     if snipe_move.is_empty() {
+    //         return;
+    //     }
+    //     let snipe_result = self.snipe(&snipe_move);
+    //     // if snipe_move.get_chains() > snipe_result.get_chains() {
+    //     if snipe_result.len() >= 11 || snipe_result.get_chains() <= 8 {
+    //         // eprintln!("update snipe: {} {} {} {} {}", self.cur_turn, self.current_best.len(), self.current_best.get_chains(), snipe_move.len(), snipe_move.get_chains());
+    //         eprintln!("update snipe: {} {} {} {} {}", self.cur_turn, snipe_move.len(), snipe_move.get_chains(), snipe_result.len(), snipe_result.get_result().obstacle);
+    //         self.current_best = snipe_move;
+    //     }
+    // }
 
-    fn update_best_move(&mut self, moves: &[replay::Replay]) {
-        // TODO 相手のフィールドの埋まり具合に合わせて狙いを変える?
-        moves.iter().for_each(|m| {
-            // 構造体側の比較に任せるべきではない
-            let cur_chains = std::cmp::min(13, self.current_best.get_chains());
-            let chains = std::cmp::min(13, m.get_chains());
-            // if cur_chains < chains || cur_chains == chains && self.current_best.len() > m.len() {
-            if cur_chains <= chains && self.current_best.len() > m.len() {
-                eprintln!("update_best_move: {} {} {} {} {}", self.cur_turn, self.current_best.len(), self.current_best.get_chains(), m.len(), m.get_chains());
-                self.current_best = m.clone();
-            }
-        });
-    }
+    // fn update_best_move(&mut self, moves: &[replay::Replay]) {
+    //     // TODO 相手のフィールドの埋まり具合に合わせて狙いを変える?
+    //     moves.iter().for_each(|m| {
+    //         // 構造体側の比較に任せるべきではない
+    //         let cur_chains = std::cmp::min(13, self.current_best.get_chains());
+    //         let chains = std::cmp::min(13, m.get_chains());
+    //         // if cur_chains < chains || cur_chains == chains && self.current_best.len() > m.len() {
+    //         if cur_chains <= chains && self.current_best.len() > m.len() {
+    //             eprintln!("update_best_move: {} {} {} {} {}", self.cur_turn, self.current_best.len(), self.current_best.get_chains(), m.len(), m.get_chains());
+    //             self.current_best = m.clone();
+    //         }
+    //     });
+    // }
 
-    fn search_snipe_move(&mut self, moves: &[replay::Replay]) -> replay::Replay {
-        // TODO 次点を探索し、それで潰せるか
-        let mut second: replay::Replay = replay::Replay::new();
-        let best_chains = self.current_best.get_chains();
-        moves.iter().for_each(|m| {
-            // 構造体側の比較に任せるべきではない
-            let chains = m.get_chains();
-            if chains >= best_chains || chains >= best_chains && self.current_best.len() <= m.len() {
-                return;
-            }
-            if best_chains != chains + 1 {
-                return;
-            }
-            // eprintln!("snipe candidate: {}", chains);
-            let second_chains = second.get_chains();
-            if second_chains < chains {
-                second = m.clone();
-            }
-        });
-        // eprintln!("snipe: {} {} {} {}", self.current_best.len(), best_chains, second.len(), second.get_chains());
-        second
-    }
+    // fn search_snipe_move(&mut self, moves: &[replay::Replay]) -> replay::Replay {
+    //     // TODO 次点を探索し、それで潰せるか
+    //     let mut second: replay::Replay = replay::Replay::new();
+    //     let best_chains = self.current_best.get_chains();
+    //     moves.iter().for_each(|m| {
+    //         // 構造体側の比較に任せるべきではない
+    //         let chains = m.get_chains();
+    //         if chains >= best_chains || chains >= best_chains && self.current_best.len() <= m.len() {
+    //             return;
+    //         }
+    //         if best_chains != chains + 1 {
+    //             return;
+    //         }
+    //         // eprintln!("snipe candidate: {}", chains);
+    //         let second_chains = second.get_chains();
+    //         if second_chains < chains {
+    //             second = m.clone();
+    //         }
+    //     });
+    //     // eprintln!("snipe: {} {} {} {}", self.current_best.len(), best_chains, second.len(), second.get_chains());
+    //     second
+    // }
 
-    fn snipe(&mut self, snipe_move: &replay::Replay) -> replay::Replay {
-        // let obstacles = snipe_move.get_raw_obstacles();
-        let obstacles = snipe_move.get_obstacles(&self.player);
-        self.search_rensa(self.enemy.clone(), 13, 2000, &obstacles).into_iter().max_by(|a, b| {
-            a.get_chains().cmp(&b.get_chains()).then(b.len().cmp(&a.len()))
-        }).unwrap()
-    }
+    // fn snipe(&mut self, snipe_move: &replay::Replay) -> replay::Replay {
+    //     // let obstacles = snipe_move.get_raw_obstacles();
+    //     let obstacles = snipe_move.get_obstacles(&self.player);
+    //     self.search_rensa(self.enemy.clone(), 13, 2000, &obstacles).into_iter().max_by(|a, b| {
+    //         a.get_chains().cmp(&b.get_chains()).then(b.len().cmp(&a.len()))
+    //     }).unwrap()
+    // }
 
     fn get_best(&self, player: player::Player, limit_obstacle: i32, enemy_send_obstacles: &[i32], states: &[replay::Replay]) -> Option<replay::Replay> {
         let mut max = -1;
