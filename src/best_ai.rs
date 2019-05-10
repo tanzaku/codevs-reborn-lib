@@ -142,8 +142,7 @@ impl<'a> BestAi<'a> {
     }
 
     fn rensa_extend(&mut self, max_turn: usize, think_time_in_milli: u64) {
-        // TODO 200 limit is too low?
-        let limit = 200;
+        let limit = 10000;
         let enemy_send_obstacles = vec![];
 
         let states = self.search_rensa(self.player.clone(), max_turn, think_time_in_milli, &enemy_send_obstacles);
