@@ -157,8 +157,8 @@ impl Board {
 
     #[inline]
     pub fn calc_max_rensa_by_erase_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
-        // self.calc_max_rensa_by_erase_block_over_obstacle()
-        self.calc_max_rensa_by_erase_outer_block()
+        self.calc_max_rensa_by_erase_block_over_obstacle()
+        // self.calc_max_rensa_by_erase_outer_block()
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
