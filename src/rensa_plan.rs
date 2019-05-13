@@ -75,6 +75,7 @@ pub struct PlanContext<'a> {
 }
 
 // 一手進める
+#[inline]
 fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> (i64, i64)
     where F: Fn(&action::ActionResult, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
@@ -87,7 +88,7 @@ fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanC
     }
 
     let feature = player.board.calc_feature();
-    let eval_result = player.board.calc_max_rensa_by_erase_outer_block().1;
+    let eval_result = player.board.calc_max_rensa_by_erase_block().1;
     let score = calc_score(&result, player, &feature);
     let eval_score = calc_score(&eval_result, player, &feature);
     (score, eval_score)

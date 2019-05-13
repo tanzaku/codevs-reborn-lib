@@ -75,7 +75,47 @@ impl Board {
         score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
     }
 
+    #[inline]
     pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
+        let mut heights = [0; W];
+        (0..W).for_each(|i| {
+            heights[i] = self.height(i);
+        });
+        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
+
+        let vanish_result = (0..W).map(|x| {
+            let l = {
+                let mut l = H;
+                if x > 0 { l = std::cmp::min(l, heights[x-1]); }
+                if x + 1 < W { l = std::cmp::min(l, heights[x+1]); }
+                std::cmp::max(l, 1) - 1
+            };
+            let h = std::cmp::max(heights[x], 1) - 1;
+
+            let r = (l..h).map(|y| {
+                if (self.column[x] >> (y*4) & 0x0F) == OBSTACLE {
+                    return Default::default();
+                }
+
+                let mut b = self.clone();
+                unsafe {
+                    use std::arch::x86_64::*;
+                    b.column[x] = _pext_u64(b.column[x], !(0x0F << (y*4)));
+                }
+                let changed = 1<<x;
+                let r = b.vanish(changed);
+                (b, r, (x, y))
+            }).max_by_key(|r| (r.1).0);
+            r
+        }).filter(|r| r.is_some()).map(|r| r.unwrap()).max_by_key(|r| (r.1).0);
+
+        let (board, vanish_result, p) = vanish_result.unwrap_or(Default::default());
+        // (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
+        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
+    }
+
+    #[inline]
+    pub fn calc_max_rensa_by_erase_block_over_obstacle(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
         let mut highest_obstacle_row = [0; W];
         (0..W).for_each(|i| {
@@ -113,6 +153,12 @@ impl Board {
         let (board, vanish_result, p) = vanish_result.unwrap_or(Default::default());
         // (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
         (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
+    }
+
+    #[inline]
+    pub fn calc_max_rensa_by_erase_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
+        // self.calc_max_rensa_by_erase_block_over_obstacle()
+        self.calc_max_rensa_by_erase_outer_block()
     }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
