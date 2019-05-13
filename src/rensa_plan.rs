@@ -13,8 +13,6 @@ use std::time::{Instant};
 use super::consts::*;
 use std::collections::HashSet;
 
-use rayon::prelude::*;
-
 // 探索結果
 #[derive(Clone, Default, PartialEq, Eq)]
 struct SearchResult {
@@ -127,15 +125,15 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
             let turn = context.plan_start_turn + search_turn;
 
             if let Some(b) = heaps[search_turn].pop() {
-                let results: Vec<_> = actions.par_iter().map(|a| {
+                actions.iter().for_each(|a| {
                     if &action::Action::UseSkill == a && !b.player.can_use_skill() {
-                        return None;
+                        return;
                     }
 
                     if board_is_empty && turn == context.plan_start_turn {
                         if let action::Action::PutBlock { pos, rot: _ } = a {
                             if *pos != W / 2 {
-                                return None;
+                                return;
                             }
                         }
                     }
@@ -144,11 +142,6 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     let (score, eval_score) = do_action(&mut player, search_turn, context, a, &calc_score);
                     let actions = push_action(b.actions, a);
                     
-                    Some((player, score, eval_score, actions))
-                }).collect();
-
-                results.into_iter().filter(|x| x.is_some()).map(|x| x.unwrap()).for_each(|x| {
-                    let (player, score, eval_score, actions) = x;
                     if player.board.is_dead() || !visited.insert(player.hash()) {
                         return;
                     }

@@ -51,7 +51,6 @@ impl Board {
                 b.column[x] |= (board[(H-1-y)*W+x] as u64) << (4 * y);
             }
         }
-        // eprintln!("{:?}", b);
         b
     }
 
