@@ -275,11 +275,32 @@ impl Board {
     /**
      * 足して10になる位置のビットのみ1が立っている
      */
+    // fn calc_remove(c1: u64, c2: u64) -> u64 {
+    //     let mask = 0x0F0F0F0F0F0F0F0F;
+    //     let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
+    //     let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
+    //     v1 ^ v2
+    // }
+
+    /**
+     * 足して10になる位置のビットのみ1が立っている
+     */
     fn calc_remove(c1: u64, c2: u64) -> u64 {
+        let mask1 = 0x1111111111111111;
+        let mask8 = 0x8888888888888888;
+        let lsb1 = c1 & mask1;
+        let lsb2 = c2 & mask1;
+        let c1 = (c1 & !mask1) >> 1;
+        let c2 = (c2 & !mask1) >> 1;
+        
+        let v = c1 + c2 + (lsb1 & lsb2);
+        let v = v & ((!(v & mask8)) >> 1) & !mask8;
+        let c = (v << 1) + (lsb1 ^ lsb2);
+        let d = !c;
+
         let mask = 0x0F0F0F0F0F0F0F0F;
-        let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
-        let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
-        v1 ^ v2
+        let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
+        v
     }
 
     fn fall_by_mask(&mut self, mask: &[u64]) -> usize {
