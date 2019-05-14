@@ -17,16 +17,6 @@ impl Player {
         Self { board, obstacle, skill_guage, /* decrease_skill_guage: 0, */ }
     }
 
-    pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
-        if self.obstacle >= W as i32 {
-            // self.obstacle -= W;
-            // self.board.fall_obstacle();
-            self.board.put_one(OBSTACLE, pos);
-        }
-        
-        self.board.put_one(v, pos)
-    }
-
     pub fn put(&mut self, pack: &[[u8; 2]; 2], action: &action::Action) -> action::ActionResult {
         if self.obstacle >= W as i32 {
             self.obstacle -= W as i32;

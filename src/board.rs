@@ -68,20 +68,12 @@ impl Board {
         self.column[x] ^= v << (h * 4);
     }
 
-    pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
-        self.fall(pos, v);
-        let changed = 1 << pos;
-        let vanish_result = self.vanish(changed);
-        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
-    }
-
     #[inline]
     pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
         (0..W).for_each(|i| {
             heights[i] = self.height(i);
         });
-        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
 
         let vanish_result = (0..W).map(|x| {
             let l = {
@@ -122,7 +114,6 @@ impl Board {
             highest_obstacle_row[i] = ((64 - Self::calc_obstacle_mask(self.column[i]).leading_zeros()) / 4) as usize;
             heights[i] = self.height(i);
         });
-        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
 
         let vanish_result = (0..W).map(|x| {
             let l = {
@@ -194,7 +185,7 @@ impl Board {
             let empty_mask = Self::calc_empty_mask(self.column[x]);
             vanished[x] &= !obstacle_mask;
             vanished[x] &= !empty_mask;
-            bombed_block += vanished[x].count_ones() / 4;   // 4bit maskなので4で割る
+            bombed_block += vanished[x].count_ones();
         });
 
         let changed = self.fall_by_mask(&vanished);
@@ -212,30 +203,30 @@ impl Board {
         (0..W).for_each(|i| heights[i] = self.height(i));
         for i in 0..W-1 {
             let r = Self::calc_remove(self.column[i], self.column[i]<<8);
-            tate += r.count_ones() / 4;
+            tate += r.count_ones();
             
             let r = Self::calc_remove(self.column[i], self.column[i]<<12);
-            tate2 += r.count_ones() / 4;
+            tate2 += r.count_ones();
 
             let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
-            keima += r.count_ones() / 4;
+            keima += r.count_ones();
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
-            keima += r.count_ones() / 4;
+            keima += r.count_ones();
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
-            keima2 += r.count_ones() / 4;
+            keima2 += r.count_ones();
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
-            keima2 += r.count_ones() / 4;
+            keima2 += r.count_ones();
 
             var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
         }
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
-        tate += r.count_ones() / 4;
+        tate += r.count_ones();
 
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
-        tate2 += r.count_ones() / 4;
+        tate2 += r.count_ones();
         
         let num_block = (0..W).map(|x| self.height(x) as i32).sum();
 
@@ -254,7 +245,7 @@ impl Board {
         let mask = 0x1111111111111111;
         let d = !c;
         let v = c & (d >> 1) & (c >> 2) & (d >> 3) & mask;
-        v * 0x0F
+        v
     }
 
     fn calc_obstacle_mask(c: u64) -> u64 {
@@ -262,7 +253,7 @@ impl Board {
         let mask = 0x1111111111111111;
         let d = !c;
         let v = c & (c >> 1) & (d >> 2) & (c >> 3) & mask;
-        v * 0x0F
+        v
     }
 
     fn calc_empty_mask(c: u64) -> u64 {
@@ -270,7 +261,7 @@ impl Board {
         let mask = 0x1111111111111111;
         let d = !c;
         let v = d & (d >> 1) & (d >> 2) & (d >> 3) & mask;
-        v * 0x0F
+        v
     }
 
     fn calc_remove0(c1: u64, c2: u64) -> u64 {
@@ -278,7 +269,7 @@ impl Board {
         let c = c1 + c2;
         let d = !c;
         let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
-        v * 0x0F
+        v
     }
 
     /**
@@ -299,7 +290,7 @@ impl Board {
             }
             unsafe {
                 use std::arch::x86_64::*;
-                self.column[i] = _pext_u64(self.column[i], !mask[i]);
+                self.column[i] = _pext_u64(self.column[i], !(mask[i] * 0x0F));
             }
         }
         changed
@@ -390,7 +381,7 @@ impl Board {
     }
 
     pub fn num_obstacle(&self) -> u64 {
-        self.column.iter().map(|c| Self::calc_obstacle_mask(*c)).sum::<u64>() / 4
+        self.column.iter().map(|c| Self::calc_obstacle_mask(*c)).sum::<u64>()
     }
 
     pub fn hash(&self) -> u64 {
