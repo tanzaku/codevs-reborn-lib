@@ -198,59 +198,60 @@ impl Board {
     }
 
     pub fn calc_feature(&self) -> Feature {
-        // let mut keima = 0;
-        // let mut keima2 = 0;
-        // let mut tate = 0;
-        // let mut tate2 = 0;
-        // let mut var = 0;
-        // let mut heights = [0; W];
-        // (0..W).for_each(|i| heights[i] = self.height(i));
-        // for i in 0..W-1 {
-        //     let r = Self::calc_remove(self.column[i], self.column[i]<<8);
-        //     tate += r.count_ones();
+        let mut keima = 0;
+        let mut keima2 = 0;
+        let mut tate = 0;
+        let mut tate2 = 0;
+        let mut var = 0;
+        let mut heights = [0; W];
+        (0..W).for_each(|i| heights[i] = self.height(i));
+        for i in 0..W-1 {
+            let r = Self::calc_remove(self.column[i], self.column[i]<<8);
+            tate += r.count_ones();
             
-        //     let r = Self::calc_remove(self.column[i], self.column[i]<<12);
-        //     tate2 += r.count_ones();
+            let r = Self::calc_remove(self.column[i], self.column[i]<<12);
+            tate2 += r.count_ones();
 
-        //     let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
-        //     keima += r.count_ones();
+            let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
+            keima += r.count_ones();
             
-        //     let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
-        //     keima += r.count_ones();
+            let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
+            keima += r.count_ones();
             
-        //     let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
-        //     keima2 += r.count_ones();
+            let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
+            keima2 += r.count_ones();
             
-        //     let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
-        //     keima2 += r.count_ones();
+            let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
+            keima2 += r.count_ones();
 
-        //     var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
-        // }
-        // let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
-        // tate += r.count_ones();
+            var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
+        }
+        let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
+        tate += r.count_ones();
 
-        // let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
-        // tate2 += r.count_ones();
+        let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
+        tate2 += r.count_ones();
         
         // let num_block = (0..W).map(|x| self.height(x) as i32).sum();
-
-        // Feature {
-        //     keima: keima as i32,
-        //     keima2: keima2 as i32,
-        //     tate: tate as i32,
-        //     tate2: tate2 as i32,
-        //     num_block,
-        //     var: var as i32,
-        // }
+        let num_block = 0;
 
         Feature {
-            keima: 0,
-            keima2: 0,
-            tate: 0,
-            tate2: 0,
-            num_block: 0,
-            var: 0,
+            keima: keima as i32,
+            keima2: keima2 as i32,
+            tate: tate as i32,
+            tate2: tate2 as i32,
+            num_block,
+            var: var as i32,
         }
+
+        // Feature {
+        //     keima: 0,
+        //     keima2: 0,
+        //     tate: 0,
+        //     tate2: 0,
+        //     num_block: 0,
+        //     var: 0,
+        // }
     }
 
     #[inline]
