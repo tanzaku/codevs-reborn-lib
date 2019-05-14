@@ -290,16 +290,17 @@ impl Board {
         let mask8 = 0x8888888888888888;
         let lsb1 = c1 & mask1;
         let lsb2 = c2 & mask1;
-        let c1 = (c1 & !mask1) >> 1;
-        let c2 = (c2 & !mask1) >> 1;
-        
-        let v = c1 + c2 + (lsb1 & lsb2);
-        let v = v & ((!(v & mask8)) >> 1) & !mask8;
-        let c = (v << 1) + (lsb1 ^ lsb2);
-        let d = !c;
+        let c1 = (c1 >> 1) & !mask8;
+        let c2 = (c2 >> 1) & !mask8;
 
-        let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask1;
-        v
+        // let mask = 0x0101010101010101;
+        // let c = c1 + c2;
+        // let d = !c;
+        // let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
+
+        let c = c1 + c2 + (lsb1 & lsb2);
+        let c = ((!c) >> 1) & c;
+        !(lsb1 ^ lsb2) & c & (c >> 2) & mask1
     }
 
     fn fall_by_mask(&mut self, mask: &[u64]) -> usize {
