@@ -9,6 +9,7 @@ use super::consts::{W,H,VANISH,OBSTACLE};
 pub struct Feature {
     pub keima: i32,
     pub keima2: i32,
+    pub keima3: i32,
     pub tate: i32,
     pub tate2: i32,
     pub num_block: i32,
@@ -200,6 +201,7 @@ impl Board {
     pub fn calc_feature(&self) -> Feature {
         let mut keima = 0;
         let mut keima2 = 0;
+        let mut keima3 = 0;
         let mut tate = 0;
         let mut tate2 = 0;
         let mut var = 0;
@@ -224,6 +226,12 @@ impl Board {
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
             keima2 += r.count_ones();
 
+            let r = Self::calc_remove(self.column[i], self.column[i+1]<<16);
+            keima3 += r.count_ones();
+            
+            let r = Self::calc_remove(self.column[i], self.column[i+1]>>16);
+            keima3 += r.count_ones();
+
             var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
         }
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
@@ -232,12 +240,12 @@ impl Board {
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
         tate2 += r.count_ones();
         
-        // let num_block = (0..W).map(|x| self.height(x) as i32).sum();
-        let num_block = 0;
+        let num_block = (0..W).map(|x| self.height(x) as i32).sum();
 
         Feature {
             keima: keima as i32,
             keima2: keima2 as i32,
+            keima3: keima3 as i32,
             tate: tate as i32,
             tate2: tate2 as i32,
             num_block,

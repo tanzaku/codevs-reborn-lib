@@ -298,7 +298,8 @@ impl<U> BestAi<U> where
                                 - max_height * 10000
                                 + feature.keima * 50
                                 + feature.tate * 40
-                                + feature.keima2 * 1
+                                + feature.keima2 * 30
+                                + feature.keima3 * 30
                                 + feature.tate2 * 1
                                 + feature.num_block * 2000
                                 // + feature.num_block * 10000
