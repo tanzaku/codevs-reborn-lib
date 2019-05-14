@@ -17,33 +17,32 @@ impl Player {
         Self { board, obstacle, skill_guage, /* decrease_skill_guage: 0, */ }
     }
 
+    pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
+        if self.obstacle >= W as i32 {
+            // self.obstacle -= W;
+            // self.board.fall_obstacle();
+            self.board.put_one(OBSTACLE, pos);
+        }
+        
+        self.board.put_one(v, pos)
+    }
+
     pub fn put(&mut self, pack: &[[u8; 2]; 2], action: &action::Action) -> action::ActionResult {
-        let mut fall_block = if self.obstacle >= W as i32 {
-                                self.obstacle -= W as i32;
-                                board::FallBlock {
-                                    block: [[OBSTACLE as u8, 0, 0]; W],
-                                    len: [1; W],
-                                    cur: [0; W],
-                                }
-                            } else {
-                                board::FallBlock {
-                                    block: [[0, 0, 0]; W],
-                                    len: [0; W],
-                                    cur: [0; W],
-                                }
-                            };
+        if self.obstacle >= W as i32 {
+            self.obstacle -= W as i32;
+            self.board.fall_obstacle();
+        }
         
         let result = match action {
             action::Action::PutBlock { pos, rot } => {
-                fall_block.push(pack, *pos, *rot);
-                let result = self.board.put(&mut fall_block);
+                let result = self.board.put(pack, *pos, *rot);
                 if result.chains > 0 {
                     self.skill_guage += 8;
                 }
                 result
             },
             action::Action::UseSkill => {
-                let result = self.board.use_skill(&mut fall_block);
+                let result = self.board.use_skill();
                 self.skill_guage = 0;
                 result
             },

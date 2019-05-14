@@ -15,16 +15,10 @@ pub struct Feature {
     pub var: i32,
 }
 
-#[derive(Default)]
-pub struct FallBlock {
-    pub block: [[u8; 3]; W],
-    pub len: [usize; W],
-    pub cur: [usize; W],
-}
-
 #[derive(Clone)]
 pub struct Board {
     column: [u64; W],
+    dead: bool,
 }
 
 fn rotate(pattern: &[[u8; 2]; 2], rot: usize) -> [[u8; 2]; 2] {
@@ -38,40 +32,11 @@ fn rotate(pattern: &[[u8; 2]; 2], rot: usize) -> [[u8; 2]; 2] {
     pattern
 }
 
-impl FallBlock {
-    #[inline]
-    pub fn push(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) {
-        let pattern = rotate(pattern, rot);
-        (0..2).for_each(|d| {
-            pattern.iter().rev().for_each(|p| {
-                if p[d] == 0 { return; }
-                let i = self.len[pos + d];
-                self.block[pos + d][i] = p[d];
-                self.len[pos + d] += 1;
-            });
-        });
-    }
-
-    #[inline]
-    pub fn pop(&mut self, x: usize) -> u8 {
-        if self.cur[x] == self.len[x] {
-            0
-        } else {
-            let i = self.cur[x];
-            self.cur[x] += 1;
-            self.block[x][i]
-        }
-    }
-    
-    pub fn exists(&self) -> bool {
-        (0..W).any(|x| self.cur[x] != self.len[x])
-    }
-}
-
 impl Board {
     pub fn new() -> Self {
         Self {
             column: [0; W],
+            dead: false,
         }
     }
 
@@ -97,14 +62,26 @@ impl Board {
         ((64 - v.leading_zeros() + 3) / 4) as u8
     }
 
+    fn fall(&mut self, x: usize, v: u64) {
+        let h = self.height(x);
+        if h == 16 { self.dead = true; return; }
+        self.column[x] ^= v << (h * 4);
+    }
+
+    pub fn put_one(&mut self, v: u64, pos: usize) -> action::ActionResult {
+        self.fall(pos, v);
+        let changed = 1 << pos;
+        let vanish_result = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
+    }
+
     #[inline]
     pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
         (0..W).for_each(|i| {
             heights[i] = self.height(i);
         });
-        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones();
-        let mut fall_block = Default::default();
+        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
 
         let vanish_result = (0..W).map(|x| {
             let l = {
@@ -126,7 +103,7 @@ impl Board {
                     b.column[x] = _pext_u64(b.column[x], !(0x0F << (y*4)));
                 }
                 let changed = 1<<x;
-                let r = b.vanish(changed, &mut fall_block);
+                let r = b.vanish(changed);
                 (b, r, (x, y))
             }).max_by_key(|r| (r.1).0);
             r
@@ -134,7 +111,7 @@ impl Board {
 
         let (board, vanish_result, p) = vanish_result.unwrap_or(Default::default());
         // (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
-        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0, false), p)
+        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
     }
 
     #[inline]
@@ -145,8 +122,7 @@ impl Board {
             highest_obstacle_row[i] = ((64 - Self::calc_obstacle_mask(self.column[i]).leading_zeros()) / 4) as usize;
             heights[i] = self.height(i);
         });
-        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones();
-        let mut fall_block = Default::default();
+        // let num_obstacle_row = Self::calc_obstacle_mask(self.column[0]).count_ones() / 4;
 
         let vanish_result = (0..W).map(|x| {
             let l = {
@@ -168,7 +144,7 @@ impl Board {
                     b.column[x] = _pext_u64(b.column[x], !(0x0F << (y*4)));
                 }
                 let changed = 1<<x;
-                let r = b.vanish(changed, &mut fall_block);
+                let r = b.vanish(changed);
                 (b, r, (x, y))
             }).max_by_key(|r| (r.1).0);
             r
@@ -176,7 +152,7 @@ impl Board {
 
         let (board, vanish_result, p) = vanish_result.unwrap_or(Default::default());
         // (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1), p)
-        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0, false), p)
+        (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
     }
 
     #[inline]
@@ -185,12 +161,23 @@ impl Board {
         // self.calc_max_rensa_by_erase_outer_block()
     }
 
-    pub fn put(&mut self, fall_block: &mut FallBlock) -> action::ActionResult {
-        let vanish_result = self.vanish(0, fall_block);
-        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1, fall_block.exists())
+    pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
+        let mut changed = 0;
+        let pattern = rotate(pattern, rot);
+        (0..2).for_each(|d| {
+            pattern.iter().rev().for_each(|p| {
+                if p[d] == 0 { return; }
+                self.fall(pos + d, p[d].into());
+                changed |= 1 << (pos + d);
+            });
+        });
+
+        // fixed changed
+        let vanish_result = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, vanish_result.1)
     }
 
-    pub fn use_skill(&mut self, fall_block: &mut FallBlock) -> action::ActionResult {
+    pub fn use_skill(&mut self) -> action::ActionResult {
         let mut vanished = [0; W];
 
         (0..W).for_each(|x| {
@@ -207,15 +194,14 @@ impl Board {
             let empty_mask = Self::calc_empty_mask(self.column[x]);
             vanished[x] &= !obstacle_mask;
             vanished[x] &= !empty_mask;
-            bombed_block += vanished[x].count_ones();   // 4bit maskなので4で割る
+            bombed_block += vanished[x].count_ones() / 4;   // 4bit maskなので4で割る
         });
 
         let changed = self.fall_by_mask(&vanished);
-        let vanish_result = self.vanish(changed, fall_block);
-        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, vanish_result.0, vanish_result.1, fall_block.exists())
+        let vanish_result = self.vanish(changed);
+        score_calculator::ScoreCalculator::calc_bomb_result(bombed_block as u8, vanish_result.0, vanish_result.1)
     }
 
-    #[inline]
     pub fn calc_feature(&self) -> Feature {
         let mut keima = 0;
         let mut keima2 = 0;
@@ -226,30 +212,30 @@ impl Board {
         (0..W).for_each(|i| heights[i] = self.height(i));
         for i in 0..W-1 {
             let r = Self::calc_remove(self.column[i], self.column[i]<<8);
-            tate += r.count_ones();
+            tate += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i]<<12);
-            tate2 += r.count_ones();
+            tate2 += r.count_ones() / 4;
 
             let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
-            keima += r.count_ones();
+            keima += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
-            keima += r.count_ones();
+            keima += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
-            keima2 += r.count_ones();
+            keima2 += r.count_ones() / 4;
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
-            keima2 += r.count_ones();
+            keima2 += r.count_ones() / 4;
 
             var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
         }
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
-        tate += r.count_ones();
+        tate += r.count_ones() / 4;
 
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
-        tate2 += r.count_ones();
+        tate2 += r.count_ones() / 4;
         
         let num_block = (0..W).map(|x| self.height(x) as i32).sum();
 
@@ -263,46 +249,41 @@ impl Board {
         }
     }
 
-    #[inline]
     fn calc_five_mask(c: u64) -> u64 {
         // 5 -> 0101
         let mask = 0x1111111111111111;
         let d = !c;
         let v = c & (d >> 1) & (c >> 2) & (d >> 3) & mask;
-        v
+        v * 0x0F
     }
 
-    #[inline]
     fn calc_obstacle_mask(c: u64) -> u64 {
         // 11 -> 1011
         let mask = 0x1111111111111111;
         let d = !c;
         let v = c & (c >> 1) & (d >> 2) & (c >> 3) & mask;
-        v
+        v * 0x0F
     }
 
-    #[inline]
     fn calc_empty_mask(c: u64) -> u64 {
         // 0 -> 0000
         let mask = 0x1111111111111111;
         let d = !c;
         let v = d & (d >> 1) & (d >> 2) & (d >> 3) & mask;
-        v
+        v * 0x0F
     }
 
-    #[inline]
     fn calc_remove0(c1: u64, c2: u64) -> u64 {
         let mask = 0x0101010101010101;
         let c = c1 + c2;
         let d = !c;
         let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
-        v
+        v * 0x0F
     }
 
     /**
      * 足して10になる位置のビットのみ1が立っている
      */
-    #[inline]
     fn calc_remove(c1: u64, c2: u64) -> u64 {
         let mask = 0x0F0F0F0F0F0F0F0F;
         let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
@@ -318,71 +299,45 @@ impl Board {
             }
             unsafe {
                 use std::arch::x86_64::*;
-                self.column[i] = _pext_u64(self.column[i], !(mask[i] * 0x0F));
+                self.column[i] = _pext_u64(self.column[i], !mask[i]);
             }
         }
         changed
     }
 
-    fn fall(&mut self, x: usize, fall_block: &mut FallBlock) -> bool {
-        let mut fall_num_block = false;
-        let mut h = self.height(x);
-        loop {
-            if h == H { break; }
-            let fall_val = fall_block.pop(x);
-            if fall_val == 0 { break; }
-            self.column[x] ^= (fall_val as u64) << (h * 4);
-            fall_num_block |= fall_val < 10;
-            h += 1;
-        }
-        fall_num_block
-    }
-
-    fn vanish(&mut self, changed: usize, fall_block: &mut FallBlock) -> (u8, i8) {
+    fn vanish(&mut self, changed: usize) -> (u8, i8) {
         let mut rensa = 0;
         let mut changed = changed;
         let mut height = 111;
 
         loop {
-            let mut c = changed | changed >> 1;
+            let c = changed | changed >> 1;
             let mut remove_mask = [0; W];
 
-            if self.fall(0, fall_block) {
-                changed |= 1;
-                c |= 3;
-            }
-            
-            if (c & 1) != 0 {
-                let r = Self::calc_remove(self.column[0], self.column[0]<<4);
-                remove_mask[0] |= r;
-                remove_mask[0] |= r >> 4;
-            }
-
-            for i in 1..W {
-                if self.fall(i, fall_block) {
-                    changed |= 1 << i;
-                    c |= 3 << i;
-                }
+            for i in 0..W-1 {
                 if (c & (1<<i)) == 0 {
                     continue
                 }
-
+                
                 let r = Self::calc_remove(self.column[i], self.column[i]<<4);
                 remove_mask[i+0] |= r;
                 remove_mask[i+0] |= r >> 4;
                 
-                let r = Self::calc_remove(self.column[i], self.column[i-1]);
+                let r = Self::calc_remove(self.column[i], self.column[i+1]);
                 remove_mask[i+0] |= r;
-                remove_mask[i-1] |= r;
+                remove_mask[i+1] |= r;
                 
-                let r = Self::calc_remove(self.column[i], self.column[i-1]<<4);
+                let r = Self::calc_remove(self.column[i], self.column[i+1]<<4);
                 remove_mask[i+0] |= r;
-                remove_mask[i-1] |= r >> 4;
+                remove_mask[i+1] |= r >> 4;
                 
-                let r = Self::calc_remove(self.column[i], self.column[i-1]>>4);
+                let r = Self::calc_remove(self.column[i], self.column[i+1]>>4);
                 remove_mask[i+0] |= r;
-                remove_mask[i-1] |= r << 4;
+                remove_mask[i+1] |= r << 4;
             }
+            let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<4);
+            remove_mask[W-1] |= r;
+            remove_mask[W-1] |= r >> 4;
 
             // eprintln!("{:?}", self);
             if height == 111 {
@@ -406,7 +361,16 @@ impl Board {
         (rensa, height)
     }
 
-    #[inline]
+    pub fn fall_obstacle(&mut self) {
+        for x in 0..W {
+            self.fall(x, OBSTACLE);
+        }
+    }
+
+    pub fn is_dead(&self) -> bool {
+        self.dead
+    }
+
     pub fn adjust_height_min(&self, x: usize) -> usize {
         let mut h = H;
         if x > 0 { h = std::cmp::min(h, self.height(x-1)); }
@@ -414,7 +378,6 @@ impl Board {
         h
     }
 
-    #[inline]
     pub fn adjust_height_max(&self, x: usize) -> usize {
         let mut h = 0;
         if x > 0 { h = std::cmp::max(h, self.height(x-1)); }
@@ -422,17 +385,14 @@ impl Board {
         h
     }
 
-    #[inline]
     pub fn max_height(&self) -> usize {
         (0..W).map(|x| self.height(x)).max().unwrap()
     }
 
-    #[inline]
     pub fn num_obstacle(&self) -> u64 {
-        self.column.iter().map(|c| Self::calc_obstacle_mask(*c)).sum::<u64>()
+        self.column.iter().map(|c| Self::calc_obstacle_mask(*c)).sum::<u64>() / 4
     }
 
-    #[inline]
     pub fn hash(&self) -> u64 {
         let mut h = 0;
         self.column.iter().for_each(|c| h = h*31+c);
