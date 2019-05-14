@@ -298,8 +298,7 @@ impl Board {
         let c = (v << 1) + (lsb1 ^ lsb2);
         let d = !c;
 
-        let mask = 0x0F0F0F0F0F0F0F0F;
-        let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
+        let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask1;
         v
     }
 
