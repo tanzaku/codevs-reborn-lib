@@ -160,9 +160,9 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
         });
     }
 
-    eprintln!("iter={}", _iter);
+    // eprintln!("iter={}", _iter);
     // bests.iter().for_each(|b| { eprintln!("obstacle={}", b.0.score / 10000000000); });
-    heaps.iter().for_each(|h| { eprintln!("size: {}", h.len()); } );
+    // heaps.iter().for_each(|h| { eprintln!("size: {}", h.len()); } );
     bests.into_iter().map(|b| {
         let mut replay = replay::Replay::new();
         let actions = b.get_actions();
