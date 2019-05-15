@@ -5,8 +5,6 @@ use std::io::Read;
 use std::io::StdinLock;
 use std::collections::VecDeque;
 
-use rayon::prelude::*;
-
 use super::action;
 use super::board;
 use super::player;
@@ -464,7 +462,7 @@ impl<'a> BestAi<'a> {
     fn fire(&self, player: &player::Player) -> (action::Action, action::ActionResult, i32) {
         let actions = action::Action::all_actions();
         let pack = self.packs[self.cur_turn];
-        actions.par_iter().map(|a| {
+        actions.iter().map(|a| {
             if &action::Action::UseSkill == a && !player.can_use_skill() {
                 return (action::Action::UseSkill, Default::default(), 0);
             }
