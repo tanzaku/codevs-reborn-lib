@@ -301,7 +301,6 @@ impl<U> BestAi<U> where
                                 + feature.keima2 * 1
                                 + feature.tate2 * 1
                                 + feature.num_block * 2000
-                                - feature.var * 20
                                 ;
             obstacle_score as i64 * 1000000 + feature_score as i64
         })
