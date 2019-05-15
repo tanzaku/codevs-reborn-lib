@@ -296,10 +296,10 @@ impl<U> BestAi<U> where
             let feature_score =
                                 (result.fire_height as i32) * 1000
                                 - max_height * 10000
-                                + feature.keima * 120
-                                + feature.tate * 80
-                                + feature.keima2 * 100
-                                + feature.tate2 * 60
+                                + feature.keima * 50
+                                + feature.tate * 800
+                                + feature.keima2 * 50
+                                + feature.tate2 * 500
                                 + feature.num_block * 2000
                                 ;
             // let feature_score =
