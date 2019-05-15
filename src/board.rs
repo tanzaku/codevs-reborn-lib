@@ -9,7 +9,6 @@ use super::consts::{W,H,VANISH,OBSTACLE};
 pub struct Feature {
     pub keima: i32,
     pub keima2: i32,
-    pub keima3: i32,
     pub tate: i32,
     pub tate2: i32,
     pub num_block: i32,
@@ -201,7 +200,6 @@ impl Board {
     pub fn calc_feature(&self) -> Feature {
         let mut keima = 0;
         let mut keima2 = 0;
-        let mut keima3 = 0;
         let mut tate = 0;
         let mut tate2 = 0;
         let mut var = 0;
@@ -226,12 +224,6 @@ impl Board {
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
             keima2 += r.count_ones();
 
-            let r = Self::calc_remove(self.column[i], self.column[i+1]<<16);
-            keima3 += r.count_ones();
-            
-            let r = Self::calc_remove(self.column[i], self.column[i+1]>>16);
-            keima3 += r.count_ones();
-
             var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
         }
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
@@ -245,21 +237,11 @@ impl Board {
         Feature {
             keima: keima as i32,
             keima2: keima2 as i32,
-            keima3: keima3 as i32,
             tate: tate as i32,
             tate2: tate2 as i32,
             num_block,
             var: var as i32,
         }
-
-        // Feature {
-        //     keima: 0,
-        //     keima2: 0,
-        //     tate: 0,
-        //     tate2: 0,
-        //     num_block: 0,
-        //     var: 0,
-        // }
     }
 
     #[inline]
@@ -309,6 +291,26 @@ impl Board {
     //     v1 ^ v2
     // }
 
+    #[inline]
+    fn calc_remove0(c1: u64, c2: u64) -> u64 {
+        let mask = 0x0101010101010101;
+        let c = c1 + c2;
+        let d = !c;
+        let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
+        v
+    }
+
+    /**
+     * 足して10になる位置のビットのみ1が立っている
+     */
+    #[inline]
+    fn calc_remove_ref(c1: u64, c2: u64) -> u64 {
+        let mask = 0x0F0F0F0F0F0F0F0F;
+        let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
+        let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
+        v1 ^ v2
+    }
+
     /**
      * 足して10になる位置のビットのみ1が立っている
      */
@@ -321,9 +323,12 @@ impl Board {
         let c1 = (c1 >> 1) & !mask8;
         let c2 = (c2 >> 1) & !mask8;
 
+        // c = 0101, lsb1 ^ lsb2 = 0
         let c = c1 + c2 + (lsb1 & lsb2);
         let c = ((!c) >> 1) & c;
-        !(lsb1 ^ lsb2) & c & (c >> 2) & mask1
+        let res = !(lsb1 ^ lsb2) & c & (c >> 2) & mask1;
+        assert_eq!(Self::calc_remove_ref(c1, c2), res);
+        res
     }
 
     #[inline]

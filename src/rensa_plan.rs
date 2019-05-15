@@ -102,7 +102,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     let timer = Instant::now();
 
     let actions = action::Action::all_actions();
-    let mut heaps = vec![BinaryHeap::new(); context.max_turn];
+    let mut heaps = vec![BinaryHeap::with_capacity(250000); context.max_turn];
+    // let mut heaps = vec![BinaryHeap::new(); context.max_turn];
 
     let mut bests: Vec<SearchResult> = vec![Default::default(); context.max_turn];
     let initial_state = BeamState::new(context.player.clone(), 0, 0);
@@ -159,8 +160,9 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
         });
     }
 
-    // eprintln!("iter={}", _iter);
+    eprintln!("iter={}", _iter);
     // bests.iter().for_each(|b| { eprintln!("obstacle={}", b.0.score / 10000000000); });
+    heaps.iter().for_each(|h| { eprintln!("size: {}", h.len()); } );
     bests.into_iter().map(|b| {
         let mut replay = replay::Replay::new();
         let actions = b.get_actions();
