@@ -11,7 +11,6 @@ use std::cmp::Ordering;
 use std::time::{Instant};
 
 use super::consts::*;
-use std::collections::HashSet;
 
 // 探索結果
 #[derive(Clone, Default, PartialEq, Eq)]
@@ -109,9 +108,6 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     let initial_state = BeamState::new(context.player.clone(), 0, 0);
     heaps[0].push(initial_state);
 
-    // let mut visited = HashSet::new();
-    // visited.insert(context.player.hash());
-
     let board_is_empty = context.player.board.is_empty();
     let mut _iter = 0;
     loop {
@@ -144,9 +140,6 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     let (score, eval_score) = do_action(&mut player, search_turn, context, a, &calc_score);
                     let actions = push_action(b.actions, a);
                     
-                    // if player.board.is_dead() || !visited.insert(player.hash()) {
-                    //     return;
-                    // }
                     if player.board.is_dead() {
                         return;
                     }

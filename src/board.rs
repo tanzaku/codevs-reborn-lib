@@ -286,25 +286,25 @@ impl Board {
     //     v1 ^ v2
     // }
 
-    #[inline]
-    fn calc_remove0(c1: u64, c2: u64) -> u64 {
-        let mask = 0x0101010101010101;
-        let c = c1 + c2;
-        let d = !c;
-        let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
-        v
-    }
+    // #[inline]
+    // fn calc_remove0(c1: u64, c2: u64) -> u64 {
+    //     let mask = 0x0101010101010101;
+    //     let c = c1 + c2;
+    //     let d = !c;
+    //     let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
+    //     v
+    // }
 
-    /**
-     * 足して10になる位置のビットのみ1が立っている
-     */
-    #[inline]
-    fn calc_remove_ref(c1: u64, c2: u64) -> u64 {
-        let mask = 0x0F0F0F0F0F0F0F0F;
-        let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
-        let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
-        v1 ^ v2
-    }
+    // /**
+    //  * 足して10になる位置のビットのみ1が立っている
+    //  */
+    // #[inline]
+    // fn calc_remove(c1: u64, c2: u64) -> u64 {
+    //     let mask = 0x0F0F0F0F0F0F0F0F;
+    //     let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
+    //     let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
+    //     v1 ^ v2
+    // }
 
     /**
      * 足して10になる位置のビットのみ1が立っている
