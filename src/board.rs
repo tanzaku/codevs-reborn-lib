@@ -316,6 +316,8 @@ impl Board {
      */
     #[inline]
     fn calc_remove(c1: u64, c2: u64) -> u64 {
+        let res_ref = Self::calc_remove_ref(c1, c2);
+
         let mask1 = 0x1111111111111111;
         let mask8 = 0x8888888888888888;
         let lsb1 = c1 & mask1;
@@ -327,7 +329,7 @@ impl Board {
         let c = c1 + c2 + (lsb1 & lsb2);
         let c = ((!c) >> 1) & c;
         let res = !(lsb1 ^ lsb2) & c & (c >> 2) & mask1;
-        assert_eq!(Self::calc_remove_ref(c1, c2), res);
+        assert_eq!(res_ref, res);
         res
     }
 
