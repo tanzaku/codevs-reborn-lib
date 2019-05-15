@@ -297,9 +297,9 @@ impl<U> BestAi<U> where
                                 (result.fire_height as i32) * 1000
                                 - max_height * 10000
                                 + feature.keima * 50
-                                + feature.tate * 40
+                                + feature.tate * 60
                                 + feature.keima2 * 1
-                                + feature.tate2 * 1
+                                + feature.tate2 * 100
                                 + feature.num_block * 2000
                                 ;
             obstacle_score as i64 * 1000000 + feature_score as i64
