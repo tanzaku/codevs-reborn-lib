@@ -293,24 +293,24 @@ impl<U> BestAi<U> where
         rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, feature| {
             let obstacle_score = std::cmp::min(result.obstacle, 200);
             let max_height = (std::cmp::max(H - 2, player.board.max_height()) - (H - 2)) as i32;
-            let feature_score =
-                                (result.fire_height as i32) * 1000
-                                - max_height * 10000
-                                + feature.keima * 50
-                                + feature.tate * 100
-                                + feature.keima2 * 3
-                                + feature.tate2 * 500
-                                + feature.num_block * 2000
-                                ;
             // let feature_score =
             //                     (result.fire_height as i32) * 1000
             //                     - max_height * 10000
             //                     + feature.keima * 50
-            //                     + feature.tate * 40
-            //                     + feature.keima2 * 1
-            //                     + feature.tate2 * 1
+            //                     + feature.tate * 100
+            //                     + feature.keima2 * 3
+            //                     + feature.tate2 * 500
             //                     + feature.num_block * 2000
             //                     ;
+            let feature_score =
+                                (result.fire_height as i32) * 1000
+                                - max_height * 10000
+                                + feature.keima * 50
+                                + feature.tate * 40
+                                + feature.keima2 * 1
+                                + feature.tate2 * 1
+                                + feature.num_block * 2000
+                                ;
             obstacle_score as i64 * 1000000 + feature_score as i64
         })
     }
