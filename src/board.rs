@@ -12,7 +12,6 @@ pub struct Feature {
     pub tate: i32,
     pub tate2: i32,
     pub num_block: i32,
-    pub var: i32,
 }
 
 #[derive(Clone)]
@@ -202,7 +201,6 @@ impl Board {
         let mut keima2 = 0;
         let mut tate = 0;
         let mut tate2 = 0;
-        let mut var = 0;
         let mut heights = [0; W];
         (0..W).for_each(|i| heights[i] = self.height(i));
         for i in 0..W-1 {
@@ -223,8 +221,6 @@ impl Board {
             
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
             keima2 += r.count_ones();
-
-            var += (heights[i] - heights[i+1]) * (heights[i] - heights[i+1]);
         }
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
         tate += r.count_ones();
@@ -240,7 +236,6 @@ impl Board {
             tate: tate as i32,
             tate2: tate2 as i32,
             num_block,
-            var: var as i32,
         }
     }
 
