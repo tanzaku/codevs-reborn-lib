@@ -491,7 +491,7 @@ impl Board {
 
     pub fn hash(&self) -> u64 {
         let mut h = 0;
-        self.column.iter().for_each(|c| h = h*31+c);
+        self.column.iter().for_each(|c| h = (h<<31)^(h>>33)^c);
         h
     }
 }
