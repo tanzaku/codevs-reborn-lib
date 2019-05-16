@@ -220,7 +220,7 @@ impl<U> BestAi<U> where
     }
 
     fn enemy_counter_result(&self) -> (bool, action::ActionResult) {
-        let (_, result, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_block_over_obstacle();
+        let (_, result, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_block();
         // eprintln!("anticounter: {} {}", y, self.enemy.board.adjust_height_min(x));
         // unreachable!();
         let dy = y as i32 - self.enemy.board.adjust_height_min(x) as i32;
