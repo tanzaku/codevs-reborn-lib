@@ -11,7 +11,8 @@ use std::cmp::Ordering;
 use std::time::{Instant};
 
 use super::consts::*;
-use std::collections::HashSet;
+// use std::collections::HashSet;
+use hashbrown::HashSet;
 
 // 探索結果
 #[derive(Clone, Default, PartialEq, Eq)]
@@ -87,7 +88,7 @@ fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanC
     }
 
     let feature = player.board.calc_feature();
-    let eval_result = player.board.calc_max_rensa_by_erase_block().1;
+    let eval_result = player.board.calc_max_rensa_by_erase_block_over_obstacle().1;
     let score = calc_score(&result, player, &feature);
     let eval_score = calc_score(&eval_result, player, &feature);
     (score, eval_score)
@@ -143,8 +144,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     let actions = push_action(b.actions, a);
                     
                     // if player.board.is_dead() || !context.enemy_send_obstacles.is_empty() && !visited.insert(player.hash()) {
-                    // if player.board.is_dead() || !visited.insert(player.hash()) {
-                    if player.board.is_dead() {
+                    if player.board.is_dead() || !visited.insert(player.hash()) {
+                    // if player.board.is_dead() {
                         return;
                     }
                     let score = score * 256 + (rand.next() & 0xFF) as i64;

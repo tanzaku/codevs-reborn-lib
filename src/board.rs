@@ -12,6 +12,8 @@ pub struct Feature {
     pub tate: i32,
     pub tate2: i32,
     pub num_block: i32,
+    // pub pairX: i32,
+    // pub pair5: i32,
 }
 
 #[derive(Clone)]
@@ -143,10 +145,10 @@ impl Board {
         (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
     }
 
-    pub fn calc_max_rensa_by_erase_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
-        self.calc_max_rensa_by_erase_block_over_obstacle()
-        // self.calc_max_rensa_by_erase_outer_block()
-    }
+    // pub fn calc_max_rensa_by_erase_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
+    //     self.calc_max_rensa_by_erase_block_over_obstacle()
+    //     // self.calc_max_rensa_by_erase_outer_block()
+    // }
 
     pub fn put(&mut self, pattern: &[[u8; 2]; 2], pos: usize, rot: usize) -> action::ActionResult {
         let mut changed = 0;
@@ -194,9 +196,32 @@ impl Board {
         let mut keima2 = 0;
         let mut tate = 0;
         let mut tate2 = 0;
+
+        // let mut pairX = 0;
+        // let mut pair5 = 0;
+
         let mut heights = [0; W];
         (0..W).for_each(|i| heights[i] = self.height(i));
         for i in 0..W-1 {
+            // pairX += std::cmp::min(Self::calc_mask1(self.column[i]).count_ones(), Self::calc_mask9(self.column[i+1]).count_ones());
+            // pairX += std::cmp::min(Self::calc_mask2(self.column[i]).count_ones(), Self::calc_mask8(self.column[i+1]).count_ones());
+            // pairX += std::cmp::min(Self::calc_mask3(self.column[i]).count_ones(), Self::calc_mask7(self.column[i+1]).count_ones());
+            // pairX += std::cmp::min(Self::calc_mask4(self.column[i]).count_ones(), Self::calc_mask6(self.column[i+1]).count_ones());
+            // pair5 += std::cmp::min(Self::calc_mask5(self.column[i]).count_ones(), Self::calc_mask5(self.column[i+1]).count_ones());
+            // pairX += std::cmp::min(Self::calc_mask6(self.column[i]).count_ones(), Self::calc_mask4(self.column[i+1]).count_ones());
+            // pairX += std::cmp::min(Self::calc_mask7(self.column[i]).count_ones(), Self::calc_mask3(self.column[i+1]).count_ones());
+            // pairX += std::cmp::min(Self::calc_mask8(self.column[i]).count_ones(), Self::calc_mask2(self.column[i+1]).count_ones());
+            // pairX += std::cmp::min(Self::calc_mask9(self.column[i]).count_ones(), Self::calc_mask1(self.column[i+1]).count_ones());
+            // pairX += Self::calc_mask1(self.column[i]).count_ones() / 2;
+            // pairX += Self::calc_mask2(self.column[i]).count_ones() / 2;
+            // pairX += Self::calc_mask3(self.column[i]).count_ones() / 2;
+            // pairX += Self::calc_mask4(self.column[i]).count_ones() / 2;
+            // pair5 += Self::calc_mask5(self.column[i]).count_ones() / 2;
+            // pairX += Self::calc_mask6(self.column[i]).count_ones() / 2;
+            // pairX += Self::calc_mask7(self.column[i]).count_ones() / 2;
+            // pairX += Self::calc_mask8(self.column[i]).count_ones() / 2;
+            // pairX += Self::calc_mask9(self.column[i]).count_ones() / 2;
+
             let r = Self::calc_remove(self.column[i], self.column[i]<<8);
             tate += r.count_ones();
             
@@ -215,6 +240,16 @@ impl Board {
             let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
             keima2 += r.count_ones();
         }
+            // pairX += Self::calc_mask1(self.column[W-1]).count_ones() / 2;
+            // pairX += Self::calc_mask2(self.column[W-1]).count_ones() / 2;
+            // pairX += Self::calc_mask3(self.column[W-1]).count_ones() / 2;
+            // pairX += Self::calc_mask4(self.column[W-1]).count_ones() / 2;
+            // pair5 += Self::calc_mask5(self.column[W-1]).count_ones() / 2;
+            // pairX += Self::calc_mask6(self.column[W-1]).count_ones() / 2;
+            // pairX += Self::calc_mask7(self.column[W-1]).count_ones() / 2;
+            // pairX += Self::calc_mask8(self.column[W-1]).count_ones() / 2;
+            // pairX += Self::calc_mask9(self.column[W-1]).count_ones() / 2;
+        
         let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
         tate += r.count_ones();
 
@@ -229,86 +264,10 @@ impl Board {
             tate: tate as i32,
             tate2: tate2 as i32,
             num_block,
+            // pairX: pairX as i32,
+            // pair5: pair5 as i32,
         }
     }
-
-    // pub fn calc_feature(&self) -> Feature {
-    //     let mut keima = 0;
-    //     let mut keima2 = 0;
-    //     let mut tate = 0;
-    //     let mut tate2 = 0;
-
-    //     let mut pairX = 0;
-    //     let mut pair5 = 0;
-
-    //     let mut heights = [0; W];
-    //     (0..W).for_each(|i| heights[i] = self.height(i));
-    //     for i in 0..W-1 {
-    //         pairX += std::cmp::min(Self::calc_mask1(self.column[i]), Self::calc_mask9(self.column[i+1]));
-    //         pairX += std::cmp::min(Self::calc_mask2(self.column[i]), Self::calc_mask8(self.column[i+1]));
-    //         pairX += std::cmp::min(Self::calc_mask3(self.column[i]), Self::calc_mask7(self.column[i+1]));
-    //         pairX += std::cmp::min(Self::calc_mask4(self.column[i]), Self::calc_mask6(self.column[i+1]));
-    //         pair5 += std::cmp::min(Self::calc_mask5(self.column[i]), Self::calc_mask5(self.column[i+1]));
-    //         pairX += std::cmp::min(Self::calc_mask6(self.column[i]), Self::calc_mask4(self.column[i+1]));
-    //         pairX += std::cmp::min(Self::calc_mask7(self.column[i]), Self::calc_mask3(self.column[i+1]));
-    //         pairX += std::cmp::min(Self::calc_mask8(self.column[i]), Self::calc_mask2(self.column[i+1]));
-    //         pairX += std::cmp::min(Self::calc_mask9(self.column[i]), Self::calc_mask1(self.column[i+1]));
-    //         pairX += Self::calc_mask1(self.column[i]) / 2;
-    //         pairX += Self::calc_mask2(self.column[i]) / 2;
-    //         pairX += Self::calc_mask3(self.column[i]) / 2;
-    //         pairX += Self::calc_mask4(self.column[i]) / 2;
-    //         pair5 += Self::calc_mask5(self.column[i]) / 2;
-    //         pairX += Self::calc_mask6(self.column[i]) / 2;
-    //         pairX += Self::calc_mask7(self.column[i]) / 2;
-    //         pairX += Self::calc_mask8(self.column[i]) / 2;
-    //         pairX += Self::calc_mask9(self.column[i]) / 2;
-
-    //         let r = Self::calc_remove(self.column[i], self.column[i]<<8);
-    //         tate += r.count_ones();
-            
-    //         let r = Self::calc_remove(self.column[i], self.column[i]<<12);
-    //         tate2 += r.count_ones();
-
-    //         let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
-    //         keima += r.count_ones();
-            
-    //         let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
-    //         keima += r.count_ones();
-            
-    //         let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
-    //         keima2 += r.count_ones();
-            
-    //         let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
-    //         keima2 += r.count_ones();
-    //     }
-    //     pairX += Self::calc_mask1(self.column[i]) / 2;
-    //     pairX += Self::calc_mask2(self.column[i]) / 2;
-    //     pairX += Self::calc_mask3(self.column[i]) / 2;
-    //     pairX += Self::calc_mask4(self.column[i]) / 2;
-    //     pair5 += Self::calc_mask5(self.column[i]) / 2;
-    //     pairX += Self::calc_mask6(self.column[i]) / 2;
-    //     pairX += Self::calc_mask7(self.column[i]) / 2;
-    //     pairX += Self::calc_mask8(self.column[i]) / 2;
-    //     pairX += Self::calc_mask9(self.column[i]) / 2;
-        
-    //     let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
-    //     tate += r.count_ones();
-
-    //     let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
-    //     tate2 += r.count_ones();
-        
-    //     let num_block = (0..W).map(|x| self.height(x) as i32).sum();
-
-    //     Feature {
-    //         keima: keima as i32,
-    //         keima2: keima2 as i32,
-    //         tate: tate as i32,
-    //         tate2: tate2 as i32,
-    //         num_block,
-    //         pairX,
-    //         pair5,
-    //     }
-    // }
 
     fn calc_mask1(c: u64) -> u64 {
         let mask = 0x1111111111111111;
@@ -389,44 +348,44 @@ impl Board {
         v
     }
 
-    // fn calc_remove0(c1: u64, c2: u64) -> u64 {
-    //     let mask = 0x0101010101010101;
-    //     let c = c1 + c2;
-    //     let d = !c;
-    //     let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
-    //     v
-    // }
-
-    // /**
-    //  * 足して10になる位置のビットのみ1が立っている
-    //  */
-    // fn calc_remove(c1: u64, c2: u64) -> u64 {
-    //     let mask = 0x0F0F0F0F0F0F0F0F;
-    //     let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
-    //     let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
-    //     v1 ^ v2
-    // }
+    fn calc_remove0(c1: u64, c2: u64) -> u64 {
+        let mask = 0x0101010101010101;
+        let c = c1 + c2;
+        let d = !c;
+        let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
+        v
+    }
 
     /**
      * 足して10になる位置のビットのみ1が立っている
      */
     fn calc_remove(c1: u64, c2: u64) -> u64 {
-        // let res_ref = Self::calc_remove_ref(c1, c2);
-
-        let mask1 = 0x1111111111111111;
-        let mask8 = 0x8888888888888888;
-        let lsb1 = c1 & mask1;
-        let lsb2 = c2 & mask1;
-        let c1 = (c1 >> 1) & !mask8;
-        let c2 = (c2 >> 1) & !mask8;
-
-        // c = 0101, lsb1 ^ lsb2 = 0
-        let c = c1 + c2 + (lsb1 & lsb2);
-        let c = ((!c) >> 1) & c;
-        let res = !(lsb1 ^ lsb2) & c & (c >> 2) & mask1;
-        // assert_eq!(res_ref, res);
-        res
+        let mask = 0x0F0F0F0F0F0F0F0F;
+        let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
+        let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
+        v1 ^ v2
     }
+
+    /**
+     * 足して10になる位置のビットのみ1が立っている
+     */
+    // fn calc_remove(c1: u64, c2: u64) -> u64 {
+    //     // let res_ref = Self::calc_remove_ref(c1, c2);
+
+    //     let mask1 = 0x1111111111111111;
+    //     let mask8 = 0x8888888888888888;
+    //     let lsb1 = c1 & mask1;
+    //     let lsb2 = c2 & mask1;
+    //     let c1 = (c1 >> 1) & !mask8;
+    //     let c2 = (c2 >> 1) & !mask8;
+
+    //     // c = 0101, lsb1 ^ lsb2 = 0
+    //     let c = c1 + c2 + (lsb1 & lsb2);
+    //     let c = ((!c) >> 1) & c;
+    //     let res = !(lsb1 ^ lsb2) & c & (c >> 2) & mask1;
+    //     // assert_eq!(res_ref, res);
+    //     res
+    // }
 
     fn fall_by_mask(&mut self, mask: &[u64]) -> usize {
         let mut changed = 0;

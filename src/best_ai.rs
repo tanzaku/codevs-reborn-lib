@@ -220,7 +220,7 @@ impl<U> BestAi<U> where
     }
 
     fn enemy_counter_result(&self) -> (bool, action::ActionResult) {
-        let (_, result, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_block();
+        let (_, result, (x,y)) = self.enemy.board.calc_max_rensa_by_erase_block_over_obstacle();
         // eprintln!("anticounter: {} {}", y, self.enemy.board.adjust_height_min(x));
         // unreachable!();
         let dy = y as i32 - self.enemy.board.adjust_height_min(x) as i32;
@@ -294,13 +294,9 @@ impl<U> BestAi<U> where
             let obstacle_score = std::cmp::min(result.obstacle, 200);
             let max_height = (std::cmp::max(H - 2, player.board.max_height()) - (H - 2)) as i32;
             // let feature_score =
-            //                     (result.fire_height as i32) * 1000
-            //                     - max_height * 10000
-            //                     + feature.keima * 50
-            //                     + feature.tate * 100
-            //                     + feature.keima2 * 3
-            //                     + feature.tate2 * 500
-            //                     + feature.num_block * 2000
+            //                     feature.pairX * 30000
+            //                     + feature.pair5 * 2000
+            //                     + feature.num_block * 20
             //                     ;
             let feature_score =
                                 (result.fire_height as i32) * 1000
