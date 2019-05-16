@@ -39,7 +39,6 @@ impl Board {
         }
     }
 
-    #[inline]
     pub fn is_empty(&self) -> bool {
         self.column.iter().all(|b| *b == 0)
     }
@@ -54,24 +53,20 @@ impl Board {
         b
     }
 
-    #[inline]
     fn height(&self, x: usize) -> usize {
         ((64 - self.column[x].leading_zeros() + 3) / 4) as usize
     }
 
-    #[inline]
     fn height_by_val(v: u64) -> u8 {
         ((64 - v.leading_zeros() + 3) / 4) as u8
     }
 
-    #[inline]
     fn fall(&mut self, x: usize, v: u64) {
         let h = self.height(x);
         if h == 16 { self.dead = true; return; }
         self.column[x] ^= v << (h * 4);
     }
 
-    #[inline]
     pub fn calc_max_rensa_by_erase_outer_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
         (0..W).for_each(|i| {
@@ -109,7 +104,6 @@ impl Board {
         (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
     }
 
-    #[inline]
     pub fn calc_max_rensa_by_erase_block_over_obstacle(&self) -> (Board, action::ActionResult, (usize, usize)) {
         let mut heights = [0; W];
         let mut highest_obstacle_row = [0; W];
@@ -149,7 +143,6 @@ impl Board {
         (board, score_calculator::ScoreCalculator::calc_chain_result(vanish_result.0, 0), p)
     }
 
-    #[inline]
     pub fn calc_max_rensa_by_erase_block(&self) -> (Board, action::ActionResult, (usize, usize)) {
         self.calc_max_rensa_by_erase_block_over_obstacle()
         // self.calc_max_rensa_by_erase_outer_block()
@@ -175,7 +168,7 @@ impl Board {
         let mut vanished = [0; W];
 
         (0..W).for_each(|x| {
-            let fives = Self::calc_five_mask(self.column[x]);
+            let fives = Self::calc_mask5(self.column[x]);
             let bombed_mask = fives << 4 | fives | fives >> 4;
             vanished[x] |= bombed_mask;
             if x > 0 { vanished[x-1] |= bombed_mask; }
@@ -239,16 +232,147 @@ impl Board {
         }
     }
 
-    #[inline]
-    fn calc_five_mask(c: u64) -> u64 {
-        // 5 -> 0101
+    // pub fn calc_feature(&self) -> Feature {
+    //     let mut keima = 0;
+    //     let mut keima2 = 0;
+    //     let mut tate = 0;
+    //     let mut tate2 = 0;
+
+    //     let mut pairX = 0;
+    //     let mut pair5 = 0;
+
+    //     let mut heights = [0; W];
+    //     (0..W).for_each(|i| heights[i] = self.height(i));
+    //     for i in 0..W-1 {
+    //         pairX += std::cmp::min(Self::calc_mask1(self.column[i]), Self::calc_mask9(self.column[i+1]));
+    //         pairX += std::cmp::min(Self::calc_mask2(self.column[i]), Self::calc_mask8(self.column[i+1]));
+    //         pairX += std::cmp::min(Self::calc_mask3(self.column[i]), Self::calc_mask7(self.column[i+1]));
+    //         pairX += std::cmp::min(Self::calc_mask4(self.column[i]), Self::calc_mask6(self.column[i+1]));
+    //         pair5 += std::cmp::min(Self::calc_mask5(self.column[i]), Self::calc_mask5(self.column[i+1]));
+    //         pairX += std::cmp::min(Self::calc_mask6(self.column[i]), Self::calc_mask4(self.column[i+1]));
+    //         pairX += std::cmp::min(Self::calc_mask7(self.column[i]), Self::calc_mask3(self.column[i+1]));
+    //         pairX += std::cmp::min(Self::calc_mask8(self.column[i]), Self::calc_mask2(self.column[i+1]));
+    //         pairX += std::cmp::min(Self::calc_mask9(self.column[i]), Self::calc_mask1(self.column[i+1]));
+    //         pairX += Self::calc_mask1(self.column[i]) / 2;
+    //         pairX += Self::calc_mask2(self.column[i]) / 2;
+    //         pairX += Self::calc_mask3(self.column[i]) / 2;
+    //         pairX += Self::calc_mask4(self.column[i]) / 2;
+    //         pair5 += Self::calc_mask5(self.column[i]) / 2;
+    //         pairX += Self::calc_mask6(self.column[i]) / 2;
+    //         pairX += Self::calc_mask7(self.column[i]) / 2;
+    //         pairX += Self::calc_mask8(self.column[i]) / 2;
+    //         pairX += Self::calc_mask9(self.column[i]) / 2;
+
+    //         let r = Self::calc_remove(self.column[i], self.column[i]<<8);
+    //         tate += r.count_ones();
+            
+    //         let r = Self::calc_remove(self.column[i], self.column[i]<<12);
+    //         tate2 += r.count_ones();
+
+    //         let r = Self::calc_remove(self.column[i], self.column[i+1]<<8);
+    //         keima += r.count_ones();
+            
+    //         let r = Self::calc_remove(self.column[i], self.column[i+1]>>8);
+    //         keima += r.count_ones();
+            
+    //         let r = Self::calc_remove(self.column[i], self.column[i+1]<<12);
+    //         keima2 += r.count_ones();
+            
+    //         let r = Self::calc_remove(self.column[i], self.column[i+1]>>12);
+    //         keima2 += r.count_ones();
+    //     }
+    //     pairX += Self::calc_mask1(self.column[i]) / 2;
+    //     pairX += Self::calc_mask2(self.column[i]) / 2;
+    //     pairX += Self::calc_mask3(self.column[i]) / 2;
+    //     pairX += Self::calc_mask4(self.column[i]) / 2;
+    //     pair5 += Self::calc_mask5(self.column[i]) / 2;
+    //     pairX += Self::calc_mask6(self.column[i]) / 2;
+    //     pairX += Self::calc_mask7(self.column[i]) / 2;
+    //     pairX += Self::calc_mask8(self.column[i]) / 2;
+    //     pairX += Self::calc_mask9(self.column[i]) / 2;
+        
+    //     let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<8);
+    //     tate += r.count_ones();
+
+    //     let r = Self::calc_remove(self.column[W-1], self.column[W-1]<<12);
+    //     tate2 += r.count_ones();
+        
+    //     let num_block = (0..W).map(|x| self.height(x) as i32).sum();
+
+    //     Feature {
+    //         keima: keima as i32,
+    //         keima2: keima2 as i32,
+    //         tate: tate as i32,
+    //         tate2: tate2 as i32,
+    //         num_block,
+    //         pairX,
+    //         pair5,
+    //     }
+    // }
+
+    fn calc_mask1(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = c & (d >> 1) & (d >> 2) & (d >> 3) & mask;
+        v
+    }
+
+    fn calc_mask2(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = d & (c >> 1) & (d >> 2) & (d >> 3) & mask;
+        v
+    }
+
+    fn calc_mask3(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = c & (c >> 1) & (d >> 2) & (d >> 3) & mask;
+        v
+    }
+
+    fn calc_mask4(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = d & (d >> 1) & (c >> 2) & (d >> 3) & mask;
+        v
+    }
+
+    fn calc_mask5(c: u64) -> u64 {
         let mask = 0x1111111111111111;
         let d = !c;
         let v = c & (d >> 1) & (c >> 2) & (d >> 3) & mask;
         v
     }
 
-    #[inline]
+    fn calc_mask6(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = d & (c >> 1) & (c >> 2) & (d >> 3) & mask;
+        v
+    }
+
+    fn calc_mask7(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = c & (c >> 1) & (c >> 2) & (d >> 3) & mask;
+        v
+    }
+
+    fn calc_mask8(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = d & (d >> 1) & (d >> 2) & (c >> 3) & mask;
+        v
+    }
+
+    fn calc_mask9(c: u64) -> u64 {
+        let mask = 0x1111111111111111;
+        let d = !c;
+        let v = c & (d >> 1) & (d >> 2) & (c >> 3) & mask;
+        v
+    }
+
     fn calc_obstacle_mask(c: u64) -> u64 {
         // 11 -> 1011
         let mask = 0x1111111111111111;
@@ -257,7 +381,6 @@ impl Board {
         v
     }
 
-    #[inline]
     fn calc_empty_mask(c: u64) -> u64 {
         // 0 -> 0000
         let mask = 0x1111111111111111;
@@ -266,7 +389,6 @@ impl Board {
         v
     }
 
-    // #[inline]
     // fn calc_remove0(c1: u64, c2: u64) -> u64 {
     //     let mask = 0x0101010101010101;
     //     let c = c1 + c2;
@@ -278,27 +400,6 @@ impl Board {
     // /**
     //  * 足して10になる位置のビットのみ1が立っている
     //  */
-    // #[inline]
-    // fn calc_remove(c1: u64, c2: u64) -> u64 {
-    //     let mask = 0x0F0F0F0F0F0F0F0F;
-    //     let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
-    //     let v2 = Self::calc_remove0(c1 >> 4 & mask, c2 >> 4 & mask) << 4;
-    //     v1 ^ v2
-    // }
-
-    // #[inline]
-    // fn calc_remove0(c1: u64, c2: u64) -> u64 {
-    //     let mask = 0x0101010101010101;
-    //     let c = c1 + c2;
-    //     let d = !c;
-    //     let v = d & (c >> 1) & (d >> 2) & (c >> 3) & (d >> 4) & mask;
-    //     v
-    // }
-
-    // /**
-    //  * 足して10になる位置のビットのみ1が立っている
-    //  */
-    // #[inline]
     // fn calc_remove(c1: u64, c2: u64) -> u64 {
     //     let mask = 0x0F0F0F0F0F0F0F0F;
     //     let v1 = Self::calc_remove0(c1 & mask, c2 & mask);
@@ -309,7 +410,6 @@ impl Board {
     /**
      * 足して10になる位置のビットのみ1が立っている
      */
-    #[inline]
     fn calc_remove(c1: u64, c2: u64) -> u64 {
         // let res_ref = Self::calc_remove_ref(c1, c2);
 
@@ -328,7 +428,6 @@ impl Board {
         res
     }
 
-    #[inline]
     fn fall_by_mask(&mut self, mask: &[u64]) -> usize {
         let mut changed = 0;
         for i in 0..mask.len() {
@@ -399,19 +498,16 @@ impl Board {
         (rensa, height)
     }
 
-    #[inline]
     pub fn fall_obstacle(&mut self) {
         for x in 0..W {
             self.fall(x, OBSTACLE);
         }
     }
 
-    #[inline]
     pub fn is_dead(&self) -> bool {
         self.dead
     }
 
-    #[inline]
     pub fn adjust_height_min(&self, x: usize) -> usize {
         let mut h = H;
         if x > 0 { h = std::cmp::min(h, self.height(x-1)); }
@@ -419,7 +515,6 @@ impl Board {
         h
     }
 
-    #[inline]
     pub fn adjust_height_max(&self, x: usize) -> usize {
         let mut h = 0;
         if x > 0 { h = std::cmp::max(h, self.height(x-1)); }
@@ -427,17 +522,14 @@ impl Board {
         h
     }
 
-    #[inline]
     pub fn max_height(&self) -> usize {
         (0..W).map(|x| self.height(x)).max().unwrap()
     }
 
-    #[inline]
     pub fn num_obstacle(&self) -> u64 {
         self.column.iter().map(|c| Self::calc_obstacle_mask(*c)).sum::<u64>()
     }
 
-    #[inline]
     pub fn hash(&self) -> u64 {
         let mut h = 0;
         self.column.iter().for_each(|c| h = h*31+c);

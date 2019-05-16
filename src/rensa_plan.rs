@@ -11,6 +11,7 @@ use std::cmp::Ordering;
 use std::time::{Instant};
 
 use super::consts::*;
+use std::collections::HashSet;
 
 // 探索結果
 #[derive(Clone, Default, PartialEq, Eq)]
@@ -74,7 +75,6 @@ pub struct PlanContext<'a> {
 }
 
 // 一手進める
-#[inline]
 fn do_action<F>(player: &mut player::Player, search_turn: usize, context: &PlanContext, action: &action::Action, calc_score: &F) -> (i64, i64)
     where F: Fn(&action::ActionResult, &player::Player, &board::Feature) -> i64 + Sync + Send
 {
@@ -101,12 +101,14 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     let timer = Instant::now();
 
     let actions = action::Action::all_actions();
-    let mut heaps = vec![BinaryHeap::with_capacity(250000); context.max_turn];
-    // let mut heaps = vec![BinaryHeap::new(); context.max_turn];
+    let mut heaps = vec![BinaryHeap::new(); context.max_turn];
 
     let mut bests: Vec<SearchResult> = vec![Default::default(); context.max_turn];
     let initial_state = BeamState::new(context.player.clone(), 0, 0);
     heaps[0].push(initial_state);
+
+    let mut visited = HashSet::new();
+    visited.insert(context.player.hash());
 
     let board_is_empty = context.player.board.is_empty();
     let mut _iter = 0;
@@ -140,6 +142,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     let (score, eval_score) = do_action(&mut player, search_turn, context, a, &calc_score);
                     let actions = push_action(b.actions, a);
                     
+                    // if player.board.is_dead() || !context.enemy_send_obstacles.is_empty() && !visited.insert(player.hash()) {
+                    // if player.board.is_dead() || !visited.insert(player.hash()) {
                     if player.board.is_dead() {
                         return;
                     }
@@ -158,7 +162,6 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
 
     // eprintln!("iter={}", _iter);
     // bests.iter().for_each(|b| { eprintln!("obstacle={}", b.0.score / 10000000000); });
-    // heaps.iter().for_each(|h| { eprintln!("size: {}", h.len()); } );
     bests.into_iter().map(|b| {
         let mut replay = replay::Replay::new();
         let actions = b.get_actions();
