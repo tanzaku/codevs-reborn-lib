@@ -104,6 +104,7 @@ impl<U> BestAi<U> where
         }
     }
 
+    // for test
     pub fn rensa_search_test(&mut self) -> Vec<u8> {
         self.read_game_input();
         self.read_turn_input();
@@ -118,6 +119,30 @@ impl<U> BestAi<U> where
         let best = self.get_best(self.player.clone(), 60, &[], &states);
         best.unwrap()
     }
+
+
+    pub fn rensa_search_best_test2(&mut self) -> replay::Replay {
+        self.read_game_input();
+        self.read_turn_input();
+        let states1 = self.search_rensa(self.player.clone(), 13, 9000, &[]);
+        let states2 = self.search_rensa2(self.player.clone(), 13, 9000, &[]);
+        let states = Self::merge_replay(&states1, &states2);
+        let best = self.get_best(self.player.clone(), 60, &[], &states);
+        best.unwrap()
+    }
+
+    fn merge_replay(lhs: &[replay::Replay], rhs: &[replay::Replay]) -> Vec<replay::Replay> {
+        lhs.iter().zip(rhs.iter()).map(|(l,r)| {
+            let lc = std::cmp::min(l.get_chains(), 13);
+            let rc = std::cmp::min(r.get_chains(), 13);
+            if lc > rc || lc == rc && l.len() <= r.len() {
+                l.clone()
+            } else {
+                r.clone()
+            }
+        }).collect()
+    }
+    // end for test
 
     fn think(&mut self) -> action::Action {
         // for bommer
@@ -299,6 +324,37 @@ impl<U> BestAi<U> where
         };
 
         rensa_plan::calc_rensa_plan(&context, &mut self.rand, |result, player, feature| {
+            let obstacle_score = std::cmp::min(result.obstacle, 200);
+            let max_height = (std::cmp::max(H - 2, player.board.max_height()) - (H - 2)) as i32;
+            // let feature_score =
+            //                     feature.pairX * 30000
+            //                     + feature.pair5 * 2000
+            //                     + feature.num_block * 20
+            //                     ;
+            let feature_score =
+                                (result.fire_height as i32) * 1000
+                                - max_height * 10000
+                                + feature.keima * 50
+                                + feature.tate * 40
+                                + feature.keima2 * 1
+                                + feature.tate2 * 1
+                                + feature.num_block * 2000
+                                ;
+            obstacle_score as i64 * 1000000 + feature_score as i64
+        })
+    }
+
+    fn search_rensa2(&mut self, player: player::Player, max_turn: usize, think_time_in_milli: u64, enemy_send_obstacles: &[i32]) -> Vec<replay::Replay> {
+        let context = rensa_plan::PlanContext {
+            plan_start_turn: self.cur_turn,
+            max_turn,
+            think_time_in_milli: think_time_in_milli,
+            player,
+            enemy_send_obstacles,
+            packs: &self.packs,
+        };
+
+        rensa_plan::calc_rensa_plan2(&context, &mut self.rand, |result, player, feature| {
             let obstacle_score = std::cmp::min(result.obstacle, 200);
             let max_height = (std::cmp::max(H - 2, player.board.max_height()) - (H - 2)) as i32;
             // let feature_score =
