@@ -111,6 +111,14 @@ impl<U> BestAi<U> where
         states.iter().map(|s| s.get_chains()).collect()
     }
 
+    pub fn rensa_search_best_test(&mut self) -> replay::Replay {
+        self.read_game_input();
+        self.read_turn_input();
+        let states = self.search_rensa(self.player.clone(), 13, 18000, &[]);
+        let best = self.get_best(self.player.clone(), 60, &[], &states);
+        best.unwrap()
+    }
+
     fn think(&mut self) -> action::Action {
         // for bommer
         if self.cur_turn == 10 && self.enemy.skill_guage >= 30 {
