@@ -108,7 +108,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     let initial_state = BeamState::new(context.player.clone(), 0, 0);
     heaps[0].push(initial_state);
 
-    let mut visited = vec![HashSet::new(); context.max_turn];
+    // let mut visited = vec![HashSet::new(); context.max_turn];
 
     let board_is_empty = context.player.board.is_empty();
     let mut _iter = 0;
