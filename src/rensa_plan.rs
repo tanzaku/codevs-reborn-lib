@@ -143,8 +143,8 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
                     let actions = push_action(b.actions, a);
                     
                     // if player.board.is_dead() || !context.enemy_send_obstacles.is_empty() && !visited.insert(player.hash()) {
-                    if player.board.is_dead() || !visited[search_turn].insert(player.hash()) {
-                    // if player.board.is_dead() {
+                    // if player.board.is_dead() || !visited[search_turn].insert(player.hash()) {
+                    if player.board.is_dead() {
                         return;
                     }
                     let score = score * 256 + (rand.next() & 0xFF) as i64;
