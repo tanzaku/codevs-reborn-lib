@@ -117,7 +117,7 @@ impl<U> BestAi<U> where
         self.read_turn_input();
         let states = self.search_rensa(self.player.clone(), 13, 18000, &[]);
         let best = self.get_best(self.player.clone(), 60, &[], &states);
-        best.unwrap()
+        best.unwrap_or(replay::Replay::new())
     }
     // end for test
 
