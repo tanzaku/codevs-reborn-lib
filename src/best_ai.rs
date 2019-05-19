@@ -329,12 +329,7 @@ impl<U> BestAi<U> where
         // eprintln!("get_best: {} {}", limit_obstacle, limit_chains);
         states.iter().for_each(|s| {
             let val = std::cmp::min(limit_chains, s.get_chains() as i32);
-            if let Some(c) = choosed {
-                if max < val && (c.get_chains() + 1 < s.get_chains() || c.len() + 5 > s.len()) {
-                    max = val;
-                    choosed = Some(s);
-                }
-            } else {
+            if max < val {
                 max = val;
                 choosed = Some(s);
             }
