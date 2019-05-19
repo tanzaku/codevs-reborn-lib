@@ -109,6 +109,7 @@ pub fn calc_rensa_plan<F>(context: &PlanContext, rand: &mut rand::XorShiftL, cal
     heaps[0].push(initial_state);
 
     let mut visited = HashSet::new();
+    visited.insert(context.player.hash());
 
     let board_is_empty = context.player.board.is_empty();
     let mut _iter = 0;
