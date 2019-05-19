@@ -11,8 +11,8 @@ use std::cmp::Ordering;
 use std::time::{Instant};
 
 use super::consts::*;
-// use std::collections::HashSet;
-use hashbrown::HashSet;
+use std::collections::HashSet;
+// use hashbrown::HashSet;
 
 // 探索結果
 #[derive(Clone, Default, PartialEq, Eq)]

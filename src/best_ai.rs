@@ -10,6 +10,7 @@ use super::player;
 use super::rensa_plan;
 use super::replay;
 use super::consts::{W,H,MAX_TURN};
+use super::score_calculator;
 
 use super::rand;
 
@@ -151,7 +152,7 @@ impl<U> BestAi<U> where
     }
 
     fn rensa_extend(&mut self, max_turn: usize, think_time_in_milli: u64) {
-        let limit = 10000;
+        let limit = 10000000;
         let enemy_send_obstacles = vec![];
 
         let states = self.search_rensa(self.player.clone(), max_turn, think_time_in_milli, &enemy_send_obstacles);
@@ -211,7 +212,7 @@ impl<U> BestAi<U> where
     }
 
     fn do_anti_counter(&mut self) -> bool {
-        let limit = 10000;
+        let limit = 10000000;
         if self.rest_time_in_milli < 30 * 1000 {
             return false;
         }
@@ -250,7 +251,7 @@ impl<U> BestAi<U> where
         self.current_best.clear();
         let max_turn = 8;
         let think_time_in_milli = 15000;
-        let limit = 10000;
+        let limit = 10000000;
         let enemy_send_obstacles = vec![];
 
         let states = self.search_rensa(self.player.clone(), max_turn, think_time_in_milli, &enemy_send_obstacles);
@@ -323,10 +324,17 @@ impl<U> BestAi<U> where
 
     fn get_best(&self, player: player::Player, limit_obstacle: i32, enemy_send_obstacles: &[i32], states: &[replay::Replay]) -> Option<replay::Replay> {
         let mut max = -1;
-        let mut choosed = None;
+        let mut choosed: Option<&replay::Replay> = None;
+        let limit_chains = score_calculator::ScoreCalculator::lower_bound(limit_obstacle);
+        // eprintln!("get_best: {} {}", limit_obstacle, limit_chains);
         states.iter().for_each(|s| {
-            let val = std::cmp::min(limit_obstacle, s.get_obstacle());
-            if max < val {
+            let val = std::cmp::min(limit_chains, s.get_chains() as i32);
+            if let Some(c) = choosed {
+                if max < val && (c.get_chains() + 1 < s.get_chains() || c.len() + 5 > s.len()) {
+                    max = val;
+                    choosed = Some(s);
+                }
+            } else {
                 max = val;
                 choosed = Some(s);
             }

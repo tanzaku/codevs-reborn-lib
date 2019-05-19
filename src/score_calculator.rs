@@ -41,6 +41,12 @@ impl ScoreCalculator {
         }
     }
 
+    pub fn lower_bound(obstacles: i32) -> i32 {
+        SCORE_CALCULATOR.with(|s| {
+            s.chian_obstacle.iter().enumerate().find(|(_,o)| **o >= obstacles).unwrap().0 as i32
+        })
+    }
+
     pub fn calc_chain_result(chains: u8, fire_height: i8) -> action::ActionResult {
         SCORE_CALCULATOR.with(|s| {
             let obstacle = s.chian_obstacle[chains as usize];
